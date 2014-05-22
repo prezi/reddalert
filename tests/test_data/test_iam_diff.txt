@@ -1,0 +1,99 @@
+--- /edda/api/v2/aws/iamUsers/alice;_pp;_at=1391699439200
++++ /edda/api/v2/aws/iamUsers/alice;_pp;_at=1391699990294
+@@ -1,32 +1,25 @@
+ {
+   "accessKeys" : [
+     {
+       "accessKeyId" : "xxx",
+       "class" : "com.amazonaws.services.identitymanagement.model.AccessKeyMetadata",
+       "createDate" : "2013-06-19T20:19:43.000Z",
+       "status" : "Active",
+       "userName" : "alice"
+-    },
+-    {
+-      "accessKeyId" : "xxx",
+-      "class" : "com.amazonaws.services.identitymanagement.model.AccessKeyMetadata",
+-      "createDate" : "2014-02-06T15:05:45.000Z",
+-      "status" : "Active",
+-      "userName" : "alice"
+     }
+   ],
+   "attributes" : {
+     "arn" : "arn:aws:iam::111:user/alice",
+     "class" : "com.amazonaws.services.identitymanagement.model.User",
+     "createDate" : "2013-06-19T20:19:43.000Z",
+     "path" : "/",
+     "userId" : "xxx",
+     "userName" : "alice"
+   },
+   "groups" : [
+     "developers",
+     "devops"
+   ],
+   "name" : "alice",
+   "userPolicies" : [ ]
+ }
+--- /edda/api/v2/aws/iamUsers/alice;_pp;_at=1391699139228
++++ /edda/api/v2/aws/iamUsers/alice;_pp;_at=1391699390361
+@@ -1,25 +1,32 @@
+ {
+   "accessKeys" : [
+     {
+       "accessKeyId" : "xxx",
+       "class" : "com.amazonaws.services.identitymanagement.model.AccessKeyMetadata",
+       "createDate" : "2013-06-19T20:19:43.000Z",
+       "status" : "Active",
+       "userName" : "alice"
++    },
++    {
++      "accessKeyId" : "xxx",
++      "class" : "com.amazonaws.services.identitymanagement.model.AccessKeyMetadata",
++      "createDate" : "2014-02-06T15:05:45.000Z",
++      "status" : "Active",
++      "userName" : "alice"
+     }
+   ],
+   "attributes" : {
+     "arn" : "arn:aws:iam::111:user/alice",
+     "class" : "com.amazonaws.services.identitymanagement.model.User",
+     "createDate" : "2013-06-19T20:19:43.000Z",
+     "path" : "/",
+     "userId" : "xxx",
+     "userName" : "alice"
+   },
+   "groups" : [
+     "developers",
+     "devops"
+   ],
+   "name" : "alice",
+   "userPolicies" : [ ]
+ }
+--- /edda/api/v2/aws/iamUsers/alice;_pp;_at=1383750287313
++++ /edda/api/v2/aws/iamUsers/alice;_pp;_at=1391699090249
+@@ -1,24 +1,25 @@
+ {
+   "accessKeys" : [
+     {
+       "accessKeyId" : "xxx",
+       "class" : "com.amazonaws.services.identitymanagement.model.AccessKeyMetadata",
+       "createDate" : "2013-06-19T20:19:43.000Z",
+       "status" : "Active",
+       "userName" : "alice"
+     }
+   ],
+   "attributes" : {
+     "arn" : "arn:aws:iam::111:user/alice",
+     "class" : "com.amazonaws.services.identitymanagement.model.User",
+     "createDate" : "2013-06-19T20:19:43.000Z",
+     "path" : "/",
+     "userId" : "xxx",
+     "userName" : "alice"
+   },
+   "groups" : [
+-    "developers"
++    "developers",
++    "devops"
+   ],
+   "name" : "alice",
+   "userPolicies" : [ ]
+ }

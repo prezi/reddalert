@@ -1,0 +1,14 @@
+{
+    "plugin.newtag": {},
+    "plugin.iam": {},
+    "since": 1392126281000,
+    "plugin.elbs": {},
+    "plugin.missingtag": {},
+    "plugin.s3acl": {},
+    "plugin.secgroups": {},
+    "plugin.ami": {
+        "first_seen": {
+            "ami-111": 1392100947000
+        }
+    }
+}

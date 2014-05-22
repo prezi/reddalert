@@ -1,0 +1,14 @@
+{
+    "plugin.newtag": {},
+    "plugin.iam": {},
+    "since": 1391003442000,
+    "plugin.elbs": {},
+    "plugin.missingtag": {},
+    "plugin.s3acl": {},
+    "plugin.secgroups": {},
+    "plugin.ami": {
+        "first_seen": {
+            "ami-deadbeef": 1382092709000
+        }
+    }
+}
