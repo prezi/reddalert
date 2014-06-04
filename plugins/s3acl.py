@@ -2,9 +2,10 @@
 
 import logging
 import random
+import re
 
 from boto.s3.key import Key
-from boto.s3.connection import S3Connection, OrdinaryCallingFormat
+from boto.s3.connection import S3Connection
 from boto.exception import S3ResponseError
 
 
@@ -16,22 +17,27 @@ class S3AclPlugin:
         logging.getLogger("boto").disabled = True
 
     def init(self, edda_client, config, status):
+        self.config = config
         self.edda_client = edda_client
         self.conn = S3Connection(config['user'], config['key'])
         self.p = config['visit_probability'] if 'visit_probability' in config else 0.1
         self.maxdir = config['visit_max'] if 'visit_max' in config else 5
-        self.excluded_buckets = config['excluded_buckets'] if 'excluded_buckets' in config else []
+        self.excluded_buckets = self.init_cache_from_list_in_config('excluded_buckets')
+        self.excluded_keys = self.init_cache_from_list_in_config('excluded_keys')
         self.allowed = config['allowed'] if 'allowed' in config else []
         self.allowed_specific = config['allowed_specific'] if 'allowed_specific' in config else {}
+
+    def init_cache_from_list_in_config(self, cache_name):
+        return list(re.compile(rule_item) for rule_item in self.config[cache_name]) if cache_name in self.config else []
 
     def run(self):
         return list(self.do_run(self.conn))
 
     def do_run(self, conn):
-        buckets = [bs for bs in conn.get_all_buckets() if bs.name not in self.excluded_buckets]
+        buckets = self.filter_excluded_buckets(conn.get_all_buckets())
 
         for b in self.sample_population(buckets):
-            keys = self.traverse_bucket(b, "")
+            keys = self.filter_excluded_keys(self.traverse_bucket(b, ""))
             for k in keys:
                 alerts = self.suspicious_grants(k)
                 if alerts:
@@ -41,6 +47,12 @@ class S3AclPlugin:
                         "url": "http://s3.amazonaws.com/%s/%s" % (k.bucket.name, k.name),
                         "details": alerts
                     }
+
+    def filter_excluded_buckets(self, buckets):
+        return [bs for bs in buckets if not any(regex.match(bs.name) for regex in self.excluded_buckets)]
+
+    def filter_excluded_keys(self, keys):
+        return [key for key in keys if not any(regex.match('%s/%s' % (key.bucket.name, key.name)) for regex in self.excluded_keys)]
 
     def traverse_bucket(self, b, prefix):
         self.logger.debug("traverse_bucket('%s', '%s')" % (b.name, prefix))

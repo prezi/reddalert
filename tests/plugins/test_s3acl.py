@@ -121,6 +121,31 @@ class PluginS3AclTestCase(unittest.TestCase):
 
         self.assertEqual([], r)
 
+    def test_filter_excluded_buckets(self):
+        bucket1 = Mock(Key)
+        bucket1.name = 'bucket1'
+        bucket2 = Mock(Key)
+        bucket2.name = 'bucket2'
+        bucket3 = Mock(Key)
+        bucket3.name = 'bucket3'
+
+        self.plugin.init(Mock(), {'user': 'bob', 'key': 'xxx', 'excluded_buckets': ['bucket[13]+', 'shouldntmatter.*']}, {})
+        r = self.plugin.filter_excluded_buckets([bucket1, bucket2, bucket3])
+        self.assertEqual([bucket2], r)
+
+    def test_filter_excluded_keys(self):
+        key1 = Mock(Key)
+        key1.name = 'key1'
+        key1.bucket = Mock()
+        key1.bucket.name = 'bucket1'
+        key2 = Mock(Key)
+        key2.name = 'key2'
+        key2.bucket = Mock()
+        key2.bucket.name = 'bucket1'
+
+        self.plugin.init(Mock(), {'user': 'bob', 'key': 'xxx', 'excluded_keys': ['^bucket[13]/.*2$', 'shouldntmatter.*']}, {})
+        r = self.plugin.filter_excluded_keys([key1, key2])
+        self.assertEqual([key1], r)
 
 def main():
     unittest.main()
