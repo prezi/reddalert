@@ -100,7 +100,8 @@ class PluginS3AclTestCase(unittest.TestCase):
                 self.plugin.init(Mock(), {'user': 'bob', 'key': 'xxx'}, {})
                 # run the tested method
                 self.assertEqual(list(self.plugin.do_run(MagicMock())), [
-                                 {'details': ['id permission'], 'id': 'bucket1:key1', 'plugin_name': 's3acl'}])
+                                 {'details': ['id permission'], 'id': 'bucket1:key1',
+                                  'url': 'http://s3.amazonaws.com/bucket1/key1', 'plugin_name': 's3acl'}])
 
     def test_survive_s3error_traverse(self):
         bucket = Mock()
