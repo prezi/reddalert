@@ -38,6 +38,7 @@ class S3AclPlugin:
                     yield {
                         "plugin_name": self.plugin_name,
                         "id": "%s:%s" % (k.bucket.name, k.name),
+                        "url": "http://s3.amazonaws.com/%s/%s" % (k.bucket.name, k.name),
                         "details": alerts
                     }
 
