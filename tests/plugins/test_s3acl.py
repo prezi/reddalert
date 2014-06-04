@@ -20,6 +20,7 @@ class PluginS3AclTestCase(unittest.TestCase):
         self.assertEqual(self.plugin.p, 0.1)
         self.assertEqual(self.plugin.maxdir, 5)
         self.assertEqual(self.plugin.excluded_buckets, [])
+        self.assertEqual(self.plugin.excluded_keys, [])
         self.assertEqual(self.plugin.allowed, [])
         self.assertEqual(self.plugin.allowed_specific, {})
 
