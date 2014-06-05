@@ -24,10 +24,10 @@
         "user": "<aws_access_key_id>",
         "key": "<aws_secret_access_key>",
         "excluded_buckets": [
-            "secret\\w*"
+            "cached\\w*"
         ],
         "excluded_keys": [
-            "^.*secret_\\w*.json$"
+            "^.*tmp_\\w*.json$"
         ],
         "allowed": [
             {"uid": "deadbeef", "op": "READ"},
