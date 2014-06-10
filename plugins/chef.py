@@ -16,7 +16,11 @@ class NonChefPlugin:
 
     def init(self, edda_client, config, status):
         self.edda_client = edda_client
-        self.api = ChefAPI(config['chef_server_url'], config['client_key_file'], config['client_name'])
+        try:
+            self.api = ChefAPI(config['chef_server_url'], config['client_key_file'], config['client_name'])
+        except:
+            self.logger.exception('Failed to open config file: %s', config['client_key_file'])
+            self.api = None
         self.excluded_instances = config.get('excluded_instances', [])
         self.initialize_status(status)
 
@@ -26,7 +30,7 @@ class NonChefPlugin:
         self.status = status
 
     def run(self):
-        return list(self.do_run())
+        return list(self.do_run()) if self.api else []
 
     def do_run(self):
         since = self.edda_client._since or 0

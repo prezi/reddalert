@@ -4,9 +4,12 @@ import logging
 import random
 import re
 
+import boto
 from boto.s3.key import Key
 from boto.s3.connection import S3Connection
 from boto.exception import S3ResponseError
+boto.config.add_section('Boto')
+boto.config.set('Boto', 'http_socket_timeout', '10')
 
 
 class S3AclPlugin:
