@@ -11,7 +11,7 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
     def setUp(self):
         self.plugin = SecurityGroupPlugin()
         self.assertEqual(self.plugin.plugin_name, 'secgroups')
-        self.config = {}
+        self.config = {'allowed_ports': [22]}
 
     def test_is_suspicious(self):
         self.plugin.init(Mock(), self.config, {})
