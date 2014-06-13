@@ -54,7 +54,9 @@ class NonChefPlugin:
                 self.status['first_seen'][machine['instanceId']] = launchTime
                 yield {
                     "plugin_name": self.plugin_name,
-                    "id": "%s (%s / %s)" % (machine['instanceId'], machine['publicIpAddress'], machine['privateIpAddress']),
+                    "id": machine.get('keyName', machine['instanceId']),
                     "details": [{'tags': tags, 'keyName': machine.get('keyName', None),
-                                'securityGroups': machine.get('securityGroups', [])}]
+                                 'securityGroups': machine.get('securityGroups', []),
+                                 'instanceId': machine['instanceId'], 'publicIpAddress': machine['publicIpAddress'],
+                                 'privateIpAddress': machine['privateIpAddress']}]
                 }
