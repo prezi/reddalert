@@ -57,10 +57,12 @@ class PluginNonChefTestCase(unittest.TestCase):
 
             # run the tested method
             self.assertEqual(list(self.plugin.do_run()), [
-                             {'id': 'a (1.1.1.1 / 10.1.1.1)', 'plugin_name': 'non_chef', 'details': [
-                              {'keyName': 'keyName1', 'securityGroups': [], 'tags': {'Name': 'tag1'}}]},
-                             {'id': 'b (2.1.1.1 / 10.1.1.2)', 'plugin_name': 'non_chef', 'details': [
-                              {'keyName': 'keyName2', 'securityGroups': [], 'tags': {'service_name': 'foo'}}]}
+                             {'id': 'keyName1', 'plugin_name': 'non_chef', 'details': [
+                              {'tags': {'Name': 'tag1'}, 'instanceId': 'a', 'keyName': 'keyName1', 'securityGroups': [],
+                               'publicIpAddress': '1.1.1.1', 'privateIpAddress': '10.1.1.1'}]},
+                             {'id': 'keyName2', 'plugin_name': 'non_chef', 'details': [
+                              {'tags': {'service_name': 'foo'}, 'instanceId': 'b', 'keyName': 'keyName2', 'securityGroups': [],
+                               'publicIpAddress': '2.1.1.1', 'privateIpAddress': '10.1.1.2'}]}
                              ])
 
     @patch('plugins.chef.ChefAPI')
@@ -99,10 +101,12 @@ class PluginNonChefTestCase(unittest.TestCase):
 
             # run the tested method
             self.assertEqual(list(self.plugin.do_run()), [
-                             {'id': 'a (1.1.1.1 / 10.1.1.1)', 'plugin_name': 'non_chef', 'details': [
-                              {'keyName': 'keyName1', 'securityGroups': [], 'tags': {'Name': 'tag1'}}]},
-                             {'id': 'b (2.1.1.1 / 10.1.1.2)', 'plugin_name': 'non_chef', 'details': [
-                              {'keyName': 'keyName2', 'securityGroups': [], 'tags': {'service_name': 'foo'}}]}
+                             {'id': 'keyName1', 'plugin_name': 'non_chef', 'details': [
+                              {'tags': {'Name': 'tag1'}, 'instanceId': 'a', 'keyName': 'keyName1', 'securityGroups': [],
+                               'publicIpAddress': '1.1.1.1', 'privateIpAddress': '10.1.1.1'}]},
+                             {'id': 'keyName2', 'plugin_name': 'non_chef', 'details': [
+                              {'tags': {'service_name': 'foo'}, 'instanceId': 'b', 'keyName': 'keyName2', 'securityGroups': [],
+                               'publicIpAddress': '2.1.1.1', 'privateIpAddress': '10.1.1.2'}]}
                              ])
 
 
