@@ -8,7 +8,7 @@ class SecurityGroupPlugin:
     def __init__(self):
         self.plugin_name = 'secgroups'
         self.allowed_protocols = ["icmp"]
-        self.allowed_ports = [22]
+        self.allowed_ports = []
         self.suspicious_range = "0.0.0.0/0"
 
     def init(self, edda_client, config, status):

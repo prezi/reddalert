@@ -15,6 +15,9 @@
     "plugin.elbs": {
         "allowed_ports": [80, 443]
     },
+    "plugin.secgroups": {
+      "allowed_ports": [22]
+    },
     "plugin.iam": {
         "allowed": [
             "^.*Deployment$"
