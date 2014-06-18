@@ -144,7 +144,7 @@ class PluginS3AclTestCase(unittest.TestCase):
         key2.bucket = Mock()
         key2.bucket.name = 'bucket1'
 
-        self.plugin.init(Mock(), {'user': 'bob', 'key': 'xxx', 'excluded_keys': ['^bucket[13]/.*2$', 'shouldntmatter.*']}, {})
+        self.plugin.init(Mock(), {'user': 'bob', 'key': 'xxx', 'excluded_keys': ['^bucket[13]:.*2$', 'shouldntmatter.*']}, {})
         r = self.plugin.filter_excluded_keys([key1, key2])
         self.assertEqual([key1], r)
 
