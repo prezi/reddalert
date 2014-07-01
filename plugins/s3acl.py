@@ -55,7 +55,7 @@ class S3AclPlugin:
         return [bs for bs in buckets if not any(regex.match(bs.name) for regex in self.excluded_buckets)]
 
     def filter_excluded_keys(self, keys):
-        return [key for key in keys if not any(regex.match('%s/%s' % (key.bucket.name, key.name)) for regex in self.excluded_keys)]
+        return [key for key in keys if not any(regex.match('%s:%s' % (key.bucket.name, key.name)) for regex in self.excluded_keys)]
 
     def traverse_bucket(self, b, prefix):
         self.logger.debug("traverse_bucket('%s', '%s')" % (b.name, prefix))
