@@ -148,6 +148,7 @@ class PluginS3AclTestCase(unittest.TestCase):
         r = self.plugin.filter_excluded_keys([key1, key2])
         self.assertEqual([key1], r)
 
+
 def main():
     unittest.main()
 
