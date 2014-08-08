@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import
 import logging
+import re
 from chef import Search, ChefAPI
 
 
@@ -29,6 +30,12 @@ class NonChefPlugin:
             status['first_seen'] = {}
         self.status = status
 
+    def is_excluded_instance(self, service_name):
+        for excluded_instance in self.excluded_instances:
+            if service_name is not None and re.match(excluded_instance, service_name):
+                return True
+        return False
+
     def run(self):
         return list(self.do_run()) if self.api else []
 
@@ -48,7 +55,7 @@ class NonChefPlugin:
             # convert list of tags to a more readable dict
             tags = {tag['key']: tag['value'] for tag in machine.get('tags', []) if 'key' in tag and 'value' in tag}
             if machine['publicIpAddress'] not in chef_hosts and launchTime >= since and \
-                    tags.get('service_name', None) not in self.excluded_instances and \
+                    not self.is_excluded_instance(tags.get('service_name', None)) and \
                     machine['instanceId'] not in self.status['first_seen']:
                 # found a non-chef managed host which has not been seen before and which is not excluded
                 self.status['first_seen'][machine['instanceId']] = launchTime
