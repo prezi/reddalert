@@ -29,7 +29,7 @@ class InstanceEnricher:
         return {
             "DNSName": elb.get("DNSName"),
             "instances": [i.get("instanceId") for i in elb.get("instances")],
-            "ports": [l.get("loadBalancerPort") for l in elb.get("listenerDescriptions")]
+            "ports": [l.get("listener", {}).get("loadBalancerPort") for l in elb.get("listenerDescriptions")]
         }
 
     def enrich(self, instance_data):
