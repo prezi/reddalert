@@ -13,7 +13,7 @@ class InstanceEnricher:
 
     def _query_security_groups(self):
         groups = self.edda_client.query("/api/v2/aws/securityGroups;_expand")
-        return {g["groupId"]: reduce(operator.add, self._clean_ip_permissions(g["ipPermissions"])) for g in groups}
+        return {g["groupId"]: reduce(operator.add, self._clean_ip_permissions(g["ipPermissions"]), []) for g in groups}
 
     def _clean_ip_permissions(self, perms):
         return [self._clean_ip_permission(p) for p in perms]

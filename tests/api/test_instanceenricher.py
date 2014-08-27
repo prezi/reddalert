@@ -1,5 +1,5 @@
 import unittest
-from mock import Mock
+from mock import Mock, patch
 
 from api.instanceenricher import InstanceEnricher
 
@@ -118,3 +118,9 @@ class InstanceEnricherTestCase(unittest.TestCase):
         self.assertIn("rules", INSTANCE_DATA["securityGroups"][0])
         self.assertEqual(1, len(INSTANCE_DATA["securityGroups"][0]["rules"]))
         self.assertEqual("jenkins", INSTANCE_DATA["service_type"])
+
+    @patch('api.instanceenricher.InstanceEnricher._clean_ip_permissions', return_value=[])
+    def test_empty_secgroup_query(self, *mocks):
+        self.edda_client.query = Mock(return_value=[{"ipPermissions": [{"ipRanges": ['1','2'], "toPort": '22'}], "groupId": "G"}])
+        self.assertEqual([], self.instance_enricher._clean_ip_permissions([{"ipRanges": [], "toPort": None}]))
+        self.assertEquals({"G": []}, self.instance_enricher._query_security_groups()) #shall not throw exception
