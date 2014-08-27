@@ -3,6 +3,7 @@ import socket
 import unittest
 from mock import patch, Mock, call
 
+from api import InstanceEnricher
 from plugins import MissingInstanceTagPlugin
 
 
@@ -13,7 +14,7 @@ class PluginMissingInstanceTagTestCase(unittest.TestCase):
         self.assertEqual(self.plugin.plugin_name, 'missingtag')
 
     def test_run(self, *mocks):
-
+        instance_enricher = InstanceEnricher(Mock())
         eddaclient = Mock()
         eddaclient._since = 200
 
@@ -29,10 +30,16 @@ class PluginMissingInstanceTagTestCase(unittest.TestCase):
         m = Mock()
         m.query = Mock(side_effect=ret_list)
         eddaclient.clean = Mock(return_value=m)
-        self.plugin.init(eddaclient, Mock(), {})
+        self.plugin.init(eddaclient, Mock(), {}, instance_enricher)
 
         # run the tested method
-        self.assertEqual(self.plugin.run(), [{'details': ['n/a'], 'id': 'a', 'plugin_name': 'missingtag'}])
+        result = self.plugin.run()
+
+        self.assertEqual(1, len(result))
+        result = result[0]
+        self.assertEqual("a", result["id"])
+        self.assertEqual(1, len(result["details"]))
+        self.assertIn("instanceId", result["details"][0])
 
         m.query.assert_has_calls([call('/api/v2/view/instances;_expand')])
 

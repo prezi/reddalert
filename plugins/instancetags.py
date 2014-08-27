@@ -48,10 +48,11 @@ class MissingInstanceTagPlugin:
     def __init__(self):
         self.plugin_name = 'missingtag'
 
-    def init(self, edda_client, config, status):
+    def init(self, edda_client, config, status, instance_enricher):
         self.edda_client = edda_client
         self.status = status
         self.config = config
+        self.instance_enricher = instance_enricher
 
     def run(self):
         return list(self.do_run())
@@ -59,15 +60,24 @@ class MissingInstanceTagPlugin:
     def do_run(self):
         machines = self.edda_client.clean().query("/api/v2/view/instances;_expand")
         since = self.edda_client._since if self.edda_client._since is not None else 0
-        fmach = [m["instanceId"] for m in machines if self.is_suspicious(m, since)]
+        suspicious_machines = [self.instance_enricher.enrich(m) for m in machines if self.is_suspicious(m, since)]
 
-        for instanceName in fmach:
+        for machine in suspicious_machines:
             yield {
                 "plugin_name": self.plugin_name,
-                "id": instanceName,
-                "details": ["n/a"]
+                "id": machine.get("instanceId"),
+                "details": [self.generate_details(machine)]
             }
 
     def is_suspicious(self, machine, since):
         tags = [t["value"] for t in machine["tags"] if t["key"] == "service_name"]
         return int(machine["launchTime"]) > since and len(tags) == 0
+
+    def generate_details(self, instance):
+        return {
+            "instanceId": instance.get("instanceId"),
+            "started": int(instance.get("launchTime")),
+            "service_type": instance.get("service_type"),
+            "elbs": instance.get("elbs"),
+            "open_ports": [sg["rules"] for sg in instance.get("securityGroups", [])]
+        }
