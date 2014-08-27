@@ -62,7 +62,7 @@ def instance_report(instance, extra={}):
         "started": int(instance.get("launchTime", 0)),
         "service_type": instance.get("service_type", None),
         "elbs": instance.get("elbs", []),
-        "open_ports": [sg["rules"] for sg in instance.get("securityGroups", [])],
+        "open_ports": reduce(operator.add, [sg["rules"] for sg in instance.get("securityGroups", [])], []),
         "publicIpAddress": instance.get("publicIpAddress", None),
         "privateIpAddress": instance.get("privateIpAddress", None)
     }
