@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-import socket
 import unittest
 from mock import patch, Mock, call
 
 from plugins import NewInstanceTagPlugin
+from api import InstanceEnricher
 
 
 class PluginNewInstanceTagTestCase(unittest.TestCase):
@@ -13,7 +13,7 @@ class PluginNewInstanceTagTestCase(unittest.TestCase):
         self.assertEqual(self.plugin.plugin_name, 'newtag')
 
     def test_run(self, *mocks):
-
+        instance_enricher = InstanceEnricher(Mock())
         eddaclient = Mock()
         eddaclient._since = 500
 
@@ -29,10 +29,16 @@ class PluginNewInstanceTagTestCase(unittest.TestCase):
         m = Mock()
         m.query = Mock(side_effect=ret_list)
         eddaclient.clean = Mock(return_value=m)
-        self.plugin.init(eddaclient, Mock(), {})
+        self.plugin.init(eddaclient, Mock(), {}, instance_enricher)
 
         # run the tested method
-        self.assertEqual(self.plugin.run(), [{'id': 'foo', 'plugin_name': 'newtag', 'details': ['b, c']}])
+        result = self.plugin.run()
+        self.assertEqual(1, len(result))
+        result = result[0]
+        self.assertEqual("foo", result["id"])
+        self.assertEqual(2, len(result["details"]))
+        self.assertIn("b", [d["instanceId"] for d in result["details"]])
+        self.assertIn("c", [d["instanceId"] for d in result["details"]])
 
         m.query.assert_has_calls([call('/api/v2/view/instances;_expand')])
 

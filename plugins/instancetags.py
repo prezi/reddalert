@@ -1,15 +1,16 @@
 #!/usr/bin/env python
-
+import itertools
 
 class NewInstanceTagPlugin:
 
     def __init__(self):
         self.plugin_name = 'newtag'
 
-    def init(self, edda_client, config, status):
+    def init(self, edda_client, config, status, instance_enricher):
         self.edda_client = edda_client
         self.status = status
         self.config = config
+        self.instance_enricher = instance_enricher
 
     def run(self):
         return list(self.do_run())
@@ -17,20 +18,26 @@ class NewInstanceTagPlugin:
     def do_run(self):
         machines = self.edda_client.clean().query("/api/v2/view/instances;_expand")
         since = self.edda_client._since if self.edda_client._since is not None else 0
-        tags = [(t["value"], m["instanceId"], int(m["launchTime"]))
+        tags = [{"tag": t["value"], "started": int(m["launchTime"]), "machine": m}
                 for m in machines
                 for t in m["tags"] if t["key"] == "service_name"]
-        tagnames = set([t[0] for t in tags])
-        grouped_by_tag = {tn: [] for tn in tagnames}
-        for t in tags:
-            grouped_by_tag[t[0]].append(t)
+        grouped_by_tag = itertools.groupby(sorted(tags, key=lambda e: e["tag"]), key=lambda e: e["tag"])
 
-        for tag_name, instances in grouped_by_tag.iteritems():
-            if all([i[2] >= since for i in instances]):
+        for tag_name, instances in grouped_by_tag:
+            instances = list(instances)
+            if all([i["started"] >= since for i in instances]):
                 yield {
                     "plugin_name": self.plugin_name,
                     "id": tag_name,
-                    "details": [", ".join([i[1] for i in instances])]
+                    "details": [
+                        {
+                            "started": i["started"],
+                            "instanceId": i["machine"].get("instanceId"),
+                            "service_type": i["machine"].get("service_type"),
+                            "elbs": i["machine"].get("elbs", []),
+                            "open_ports": [sg["rules"] for sg in i["machine"].get("securityGroups", [])]
+                        } for i in instances
+                    ]
                 }
 
 
