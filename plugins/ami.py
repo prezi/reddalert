@@ -25,15 +25,7 @@ class NewAMIPlugin:
         return machine.get("service_type") in self.allowed_services
 
     def generate_details(self, machines):
-        for instanceId, started, machine in machines:
-            self.instance_enricher.enrich(machine)
-            yield {
-                "instanceId": instanceId,
-                "started": started,
-                "service_type": machine["service_type"],
-                "elbs": machine.get("elbs"),
-                "open_ports": [sg["rules"] for sg in machine.get("securityGroups", [])]
-            }
+        return [self.instance_enricher.report(machine) for instanceId, started, machine in machines]
 
     def do_run(self):
         since = self.edda_client._since if self.edda_client._since is not None else 0
@@ -55,9 +47,8 @@ class NewAMIPlugin:
             if first_seen[ami_id] >= since:
                 new_machines = [i for i in instances if i[1] >= since and not self.is_blacklisted(i[2])]
                 if len(new_machines) > 0:
-                    details = list(self.generate_details(new_machines))
                     yield {
                         "plugin_name": self.plugin_name,
                         "id": ami_id,
-                        "details": details
+                        "details": self.generate_details(new_machines)
                     }

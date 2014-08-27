@@ -51,3 +51,18 @@ class InstanceEnricher:
                 if tag.get("key") == tag_name:
                     return tag.get("value")
         return None
+
+    def report(self, instance_data, extra={}):
+        return instance_report(self.enrich(instance_data), extra)
+
+
+def instance_report(instance, extra={}):
+    result = {
+        "instanceId": instance.get("instanceId", None),
+        "started": int(instance.get("launchTime", 0)),
+        "service_type": instance.get("service_type", None),
+        "elbs": instance.get("elbs", []),
+        "open_ports": [sg["rules"] for sg in instance.get("securityGroups", [])]
+    }
+    result.update(extra)
+    return result
