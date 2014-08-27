@@ -15,7 +15,7 @@ class NonChefPlugin:
         self.plugin_name = 'non_chef'
         self.logger = logging.getLogger('non_chef')
 
-    def init(self, edda_client, config, status):
+    def init(self, edda_client, config, status, instance_enricher):
         self.edda_client = edda_client
         try:
             self.api = ChefAPI(config['chef_server_url'], config['client_key_file'], config['client_name'])
@@ -24,6 +24,7 @@ class NonChefPlugin:
             self.api = None
         self.excluded_instances = config.get('excluded_instances', [])
         self.initialize_status(status)
+        self.instance_enricher = instance_enricher
 
     def initialize_status(self, status):
         if 'first_seen' not in status:
@@ -58,11 +59,14 @@ class NonChefPlugin:
                     not self.is_excluded_instance(tags.get('service_name', None) or tags.get('Name', None)) and \
                     machine['instanceId'] not in self.status['first_seen']:
                 # found a non-chef managed host which has not been seen before and which is not excluded
+                machine = self.instance_enricher.enrich(machine)
                 self.status['first_seen'][machine['instanceId']] = launchTime
                 yield {
                     "plugin_name": self.plugin_name,
                     "id": machine.get('keyName', machine['instanceId']),
                     "details": [{'tags': tags, 'keyName': machine.get('keyName', None),
+                                 'service_type': machine.get("service_type"), 'elbs': machine.get('elbs', []),
+                                 'open_ports': [sg["rules"] for sg in machine.get("securityGroups", [])],
                                  'securityGroups': machine.get('securityGroups', []),
                                  'instanceId': machine['instanceId'], 'publicIpAddress': machine['publicIpAddress'],
                                  'privateIpAddress': machine['privateIpAddress']}]

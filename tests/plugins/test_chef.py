@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 
-import socket
 import unittest
 from mock import patch, Mock, call, MagicMock
 
+from api import InstanceEnricher
 from plugins import NonChefPlugin
-import chef
 
 
 class PluginNonChefTestCase(unittest.TestCase):
@@ -20,12 +19,13 @@ class PluginNonChefTestCase(unittest.TestCase):
 
     def test_initialize(self, *mocks):
         with patch('plugins.chef.ChefAPI') as mock:
-            self.plugin.init(Mock(), self.config, {})
+            self.plugin.init(Mock(), self.config, {}, Mock())
             self.assertEqual(self.plugin.excluded_instances, ['jenkins'])
             mock.assert_called_once_with('foo', '<key_file>', 'bar')
 
     @patch('plugins.chef.ChefAPI')
     def test_empty_status(self, *mocks):
+        instance_enricher = InstanceEnricher(Mock())
         eddaclient = Mock()
 
         def ret_list(args):
@@ -53,20 +53,23 @@ class PluginNonChefTestCase(unittest.TestCase):
                     {'foo': {'cloud': {'public_ipv4': '2.1.1.1'}}}]
 
         with patch('plugins.chef.Search', side_effect=chef_list) as MockClass:
-            self.plugin.init(eddaclient, self.config, {})
+            self.plugin.init(eddaclient, self.config, {}, instance_enricher)
 
             # run the tested method
             self.assertEqual(list(self.plugin.do_run()), [
                              {'id': 'keyName1', 'plugin_name': 'non_chef', 'details': [
                               {'tags': {'Name': 'tag1'}, 'instanceId': 'a', 'keyName': 'keyName1', 'securityGroups': [],
-                               'publicIpAddress': '1.1.1.1', 'privateIpAddress': '10.1.1.1'}]},
+                               'publicIpAddress': '1.1.1.1', 'privateIpAddress': '10.1.1.1', 'elbs': [], 'open_ports': [],
+                               'service_type': 'tag1'}]},
                              {'id': 'keyName2', 'plugin_name': 'non_chef', 'details': [
                               {'tags': {'service_name': 'foo'}, 'instanceId': 'b', 'keyName': 'keyName2', 'securityGroups': [],
-                               'publicIpAddress': '2.1.1.1', 'privateIpAddress': '10.1.1.2'}]}
+                               'publicIpAddress': '2.1.1.1', 'privateIpAddress': '10.1.1.2', 'elbs': [], 'open_ports': [],
+                               'service_type': 'foo'}]}
                              ])
 
     @patch('plugins.chef.ChefAPI')
     def test_nonempty_status(self, *mocks):
+        instance_enricher = InstanceEnricher(Mock())
         eddaclient = Mock()
 
         def ret_list(args):
@@ -97,16 +100,18 @@ class PluginNonChefTestCase(unittest.TestCase):
                     {'foo': {'cloud': {'public_ipv4': '2.1.1.1'}}}]
 
         with patch('plugins.chef.Search', side_effect=chef_list) as MockClass:
-            self.plugin.init(eddaclient, self.config, {"first_seen": {'f': 8}})
+            self.plugin.init(eddaclient, self.config, {"first_seen": {'f': 8}}, instance_enricher)
 
             # run the tested method
             self.assertEqual(list(self.plugin.do_run()), [
                              {'id': 'keyName1', 'plugin_name': 'non_chef', 'details': [
                               {'tags': {'Name': 'tag1'}, 'instanceId': 'a', 'keyName': 'keyName1', 'securityGroups': [],
-                               'publicIpAddress': '1.1.1.1', 'privateIpAddress': '10.1.1.1'}]},
+                               'publicIpAddress': '1.1.1.1', 'privateIpAddress': '10.1.1.1', 'service_type': 'tag1',
+                               'elbs': [], 'open_ports': []}]},
                              {'id': 'keyName2', 'plugin_name': 'non_chef', 'details': [
                               {'tags': {'service_name': 'foo'}, 'instanceId': 'b', 'keyName': 'keyName2', 'securityGroups': [],
-                               'publicIpAddress': '2.1.1.1', 'privateIpAddress': '10.1.1.2'}]}
+                               'publicIpAddress': '2.1.1.1', 'privateIpAddress': '10.1.1.2', 'service_type': 'foo',
+                               'elbs': [], 'open_ports': []}]}
                              ])
 
 
