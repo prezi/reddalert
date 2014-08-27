@@ -40,19 +40,14 @@ class PluginAmiTestCase(unittest.TestCase):
         eddaclient.soft_clean = Mock(return_value=m)
         self.plugin.init(eddaclient, self.config, {'first_seen': {"ami-1": 1000, "ami-2": 400}}, instance_enricher)
 
-        real = self.plugin.run()
-        expected = [
-            {
-                'id': 'ami-1',
-                'plugin_name': 'ami',
-                'details': [
-                    {'instanceId': 'a', 'started': 500, 'service_type': 'conversion', 'elbs': [], 'open_ports': []},
-                    {'instanceId': 'b', 'started': 2000, 'service_type': 'router', 'elbs': [], 'open_ports': []}
-                ]
-            }
-        ]
+        result = self.plugin.run()
 
-        self.assertEqual(expected, real)
+        self.assertEqual(1, len(result))
+        result = result[0]
+        self.assertEqual('ami-1', result['id'])
+        self.assertEqual(2, len(result['details']))
+        self.assertIn('a', [d['instanceId'] for d in result['details']])
+        self.assertIn('b', [d['instanceId'] for d in result['details']])
 
         m.query.assert_has_calls([call('/api/v2/view/instances;_expand')])
         self.assertEqual(self.plugin.status, {'first_seen': {'ami-1': 500, 'ami-2': 400}})

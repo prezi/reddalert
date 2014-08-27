@@ -63,9 +63,7 @@ class NonChefPlugin:
                 extra_details = {
                     'tags': tags,
                     'keyName': machine.get('keyName', None),
-                    'securityGroups': machine.get('securityGroups', []),
-                    'publicIpAddress': machine['publicIpAddress'],
-                    'privateIpAddress': machine['privateIpAddress']
+                    'securityGroups': machine.get('securityGroups', [])
                 }
                 details = self.instance_enricher.report(machine, extra=extra_details)
                 yield {
