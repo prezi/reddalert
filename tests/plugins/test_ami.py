@@ -4,6 +4,7 @@ import unittest
 from mock import patch, Mock, call
 
 from plugins import NewAMIPlugin
+from api import InstanceEnricher
 
 
 class PluginAmiTestCase(unittest.TestCase):
@@ -14,13 +15,14 @@ class PluginAmiTestCase(unittest.TestCase):
         self.config = {"allowed_tags": ['jenkins']}
 
     def test_initialize(self):
-        self.plugin.init(Mock(), self.config, {})
+        self.plugin.init(Mock(), self.config, {}, Mock())
         self.assertEqual(self.plugin.status, {'first_seen': {}})
         expected = {'first_seen': {"ami-111": 1392015440000}, 'a': 3}
-        self.plugin.init(Mock(), self.config, expected)
+        self.plugin.init(Mock(), self.config, expected, Mock())
         self.assertEqual(self.plugin.status, expected)
 
     def test_run(self, *mocks):
+        instance_enricher = InstanceEnricher(Mock())
 
         eddaclient = Mock()
         eddaclient._since = 500
@@ -35,14 +37,19 @@ class PluginAmiTestCase(unittest.TestCase):
 
         m = Mock()
         m.query = Mock(side_effect=ret_list)
-        eddaclient.clean = Mock(return_value=m)
-        self.plugin.init(eddaclient, self.config, {'first_seen': {"ami-1": 1000, "ami-2": 400}})
+        eddaclient.soft_clean = Mock(return_value=m)
+        self.plugin.init(eddaclient, self.config, {'first_seen': {"ami-1": 1000, "ami-2": 400}}, instance_enricher)
 
         real = self.plugin.run()
         expected = [
-            {'id': 'ami-1', 'plugin_name': 'ami', 'details': [
-                ('a', 500, [{'service_name': 'conversion'}, {'started_by': 'john'}]),
-                ('b', 2000, [{'service_name': 'router'}])]}
+            {
+                'id': 'ami-1',
+                'plugin_name': 'ami',
+                'details': [
+                    {'instanceId': 'a', 'started': 500, 'service_type': 'conversion', 'elbs': [], 'open_ports': []},
+                    {'instanceId': 'b', 'started': 2000, 'service_type': 'router', 'elbs': [], 'open_ports': []}
+                ]
+            }
         ]
 
         self.assertEqual(expected, real)
@@ -51,15 +58,16 @@ class PluginAmiTestCase(unittest.TestCase):
         self.assertEqual(self.plugin.status, {'first_seen': {'ami-1': 500, 'ami-2': 400}})
 
     def test_skipped_service(self):
+        instance_enricher = InstanceEnricher(Mock())
         eddaclient = Mock()
         eddaclient.query = Mock(return_value=[
             {'imageId': 'ami-1', 'instanceId': 'b', 'launchTime': '2000',
              'tags': [{'key': 'service_name', 'value': 'jenkins'}]}])
         uncleaned_eddaclient = Mock()
-        uncleaned_eddaclient.clean = Mock(return_value=eddaclient)
+        uncleaned_eddaclient.soft_clean = Mock(return_value=eddaclient)
         uncleaned_eddaclient._since = 500
 
-        self.plugin.init(uncleaned_eddaclient, self.config, {'first_seen': {}})
+        self.plugin.init(uncleaned_eddaclient, self.config, {'first_seen': {}}, instance_enricher)
 
         real = self.plugin.run()
         expected = []

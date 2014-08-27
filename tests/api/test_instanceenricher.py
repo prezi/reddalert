@@ -8,7 +8,7 @@ class InstanceEnricherTestCase(unittest.TestCase):
     def setUp(self):
         self.edda_client = Mock()
         edda_outer = Mock()
-        edda_outer.clean = Mock(return_value=self.edda_client)
+        edda_outer.soft_clean = Mock(return_value=self.edda_client)
         self.instance_enricher = InstanceEnricher(edda_outer)
 
     def test_query_securitygroups(self):

@@ -118,3 +118,6 @@ class EddaClient:
 
     def clean(self):
         return EddaClient(self._edda_url)
+
+    def soft_clean(self):
+        return self.clean().with_cache(self._cache)

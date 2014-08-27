@@ -3,7 +3,9 @@ import operator
 class InstanceEnricher:
 
     def __init__(self, edda_client):
-        self.edda_client = edda_client.clean()
+        self.edda_client = edda_client.soft_clean()
+        self.elbs = []
+        self.sec_groups = {}
 
     def initialize_caches(self):
         self.elbs = self._query_loadbalancers()
@@ -34,11 +36,13 @@ class InstanceEnricher:
         instance_id = instance_data.get("instanceId")
         instance_data["service_type"] = self._get_type_from_tags(instance_data.get("tags", [])) or instance_id
         instance_data["elbs"] = [elb for elb in self.elbs if instance_id in elb["instances"]]
-        self._enrich_security_groups(instance_data["securityGroups"])
+        self._enrich_security_groups(instance_data)
+        return instance_data
 
-    def _enrich_security_groups(self, security_groups):
-        for sg in security_groups:
-            sg["rules"] = self.sec_groups.get(sg["groupId"], [])
+    def _enrich_security_groups(self, instance_data):
+        if "securityGroups" in instance_data:
+            for sg in instance_data["securityGroups"]:
+                sg["rules"] = self.sec_groups.get(sg["groupId"], [])
 
     def _get_type_from_tags(self, tags):
         LOOKUP_ORDER = ["service_name", "Name", "aws:autoscaling:groupName"]
