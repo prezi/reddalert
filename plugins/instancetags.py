@@ -26,6 +26,8 @@ class NewInstanceTagPlugin:
         for tag_name, instances in grouped_by_tag:
             instances = list(instances)
             if all([i["started"] >= since for i in instances]):
+                instances = [{"tag": i["tag"], "started": i["started"], "machine": self.instance_enricher.enrich(i["machine"])}
+                             for i in instances]
                 yield {
                     "plugin_name": self.plugin_name,
                     "id": tag_name,
