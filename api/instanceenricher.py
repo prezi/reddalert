@@ -1,5 +1,6 @@
 import operator
 
+
 class InstanceEnricher:
 
     def __init__(self, edda_client):
@@ -34,7 +35,8 @@ class InstanceEnricher:
 
     def enrich(self, instance_data):
         instance_id = instance_data.get("instanceId")
-        instance_data["service_type"] = self._get_type_from_tags(instance_data.get("tags", [])) or instance_id
+        ami = instance_data.get("imageId")
+        instance_data["service_type"] = self._get_type_from_tags(instance_data.get("tags", [])) or ami
         instance_data["elbs"] = [elb for elb in self.elbs if instance_id in elb["instances"]]
         self._enrich_security_groups(instance_data)
         return instance_data
@@ -45,7 +47,7 @@ class InstanceEnricher:
                 sg["rules"] = self.sec_groups.get(sg["groupId"], [])
 
     def _get_type_from_tags(self, tags):
-        LOOKUP_ORDER = ["service_name", "Name", "aws:autoscaling:groupName"]
+        LOOKUP_ORDER = ["service_name", "Name", "aws:cloudformation:stack-name", "aws:autoscaling:groupName"]
         for tag_name in LOOKUP_ORDER:
             for tag in tags:
                 if tag.get("key") == tag_name:
