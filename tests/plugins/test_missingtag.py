@@ -37,7 +37,7 @@ class PluginMissingInstanceTagTestCase(unittest.TestCase):
 
         self.assertEqual(1, len(result))
         result = result[0]
-        self.assertEqual("a", result["id"])
+        self.assertEqual("tag1", result["id"]) # service_type became the new id, which in this case is the Name tag
         self.assertEqual(1, len(result["details"]))
         self.assertIn("instanceId", result["details"][0])
 
