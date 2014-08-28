@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import itertools
+from api import instance_report
 
 class NewInstanceTagPlugin:
 
@@ -52,10 +53,11 @@ class MissingInstanceTagPlugin:
         since = self.edda_client._since if self.edda_client._since is not None else 0
         suspicious_machines = [m for m in machines if self.is_suspicious(m, since)]
         for machine in suspicious_machines:
+            machine = self.instance_enricher.enrich(machine)
             yield {
                 "plugin_name": self.plugin_name,
-                "id": machine.get("instanceId"),
-                "details": [self.instance_enricher.report(machine)]
+                "id": machine.get("service_type", machine.get("instanceId")),
+                "details": [instance_report(machine)]
             }
 
     def is_suspicious(self, machine, since):
