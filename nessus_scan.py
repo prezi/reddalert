@@ -24,7 +24,7 @@ if __name__ == '__main__':
     parser.add_argument('--queue-name', default='sccengine-prod', help='Name of output SQS queue')
     # hack to avoid race condition within EDDA: it's possible instances are synced while eg security groups aren't.
     parser.add_argument('--until', '-u', default=int(time.time()) * 1000 - 5 * 60 * 1000, help='Until, epoch in ms')
-    parser.add_argument('--edda', '-e', default='http://localhost:8888/edda', help='Edda base URL')
+    parser.add_argument('--edda', '-e', help='Edda base URL')
     parser.add_argument('--silent', '-l', action="count", help='Supress log messages lower than warning')
     args = parser.parse_args()
 
