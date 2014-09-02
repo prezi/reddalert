@@ -10,6 +10,7 @@ if __name__ == '__main__':
     import sys
     import boto.sqs
     import json
+    import itertools
     from api import EddaClient
 
     parser = argparse.ArgumentParser(description='Runs tests against AWS configuration')
@@ -17,6 +18,7 @@ if __name__ == '__main__':
     parser.add_argument('--policy-id', '-p', help='Nessus policy id used for scanning')
     parser.add_argument('--scan-name', help='Name of the created Nessus scan')
     parser.add_argument('--service-type', '-t', help='Service type to scan')
+    parser.add_argument('--random-service-types', help='Number of random service types to scan')
     parser.add_argument('--instances', '-n', default='1', help='Number of (random) instances to scan (all|<number>)')
     parser.add_argument('--region', default='us-east-1', help='Region of output SQS queue')
     parser.add_argument('--queue-name', default='sccengine-prod', help='Name of output SQS queue')
@@ -57,22 +59,39 @@ if __name__ == '__main__':
 
     instances = edda_client.query("/api/v2/view/instances;_expand")
     enriched_instances = [instance_enricher.report(instance) for instance in instances]
+    grouped_by_service_type = itertools.groupby(sorted(enriched_instances, key=lambda i: i['service_type']),
+                                                key=lambda i: i['service_type'])
+    service_types = []
+    for k, g in grouped_by_service_type:
+        service_types.append(list(g))  # Store group iterator as a list
+
+    # print 'service_types', service_types
+    if args.service_type:
+        instance_candidates = [instance for instance in enriched_instances if
+                               instance.get('service_type') == args.service_type]
+        count = len(instance_candidates) if args.instances == 'all' else min(int(args.instances),
+                                                                             len(instance_candidates))
+        filtered_instances = [instance_candidates[i] for i in random.sample(xrange(len(instance_candidates)), count)]
+        root_logger.debug('Got service type, filtered instances: %s' % json.dumps(filtered_instances, indent=4))
+    elif args.random_service_types:
+        count = min(int(args.random_service_types), len(service_types))
+        chosen_service_types = [service_types[i] for i in random.sample(xrange(len(service_types)), count)]
+
+        # print 'chosen_service_types', chosen_service_types
+        filtered_instances = [random.choice(instances) for instances in chosen_service_types]
+
+        root_logger.debug('Got random service types, filtered instances: %s' % json.dumps(filtered_instances, indent=4))
+    else:
+        filtered_instances = instances
+
     conn = boto.sqs.connect_to_region(args.region, aws_access_key_id=config['plugin.s3acl']['user'],
                                       aws_secret_access_key=config['plugin.s3acl']['key'])
     sqs_queue = conn.get_queue(args.queue_name)
     sqs_queue.set_message_class(boto.sqs.message.RawMessage)
 
-    if args.service_type:
-        filtered_instances = [instance for instance in enriched_instances if
-                              instance.get('service_type') == args.service_type]
-        root_logger.debug('Got service type, filtered instances: %s' % json.dumps(filtered_instances, indent=4))
-    else:
-        filtered_instances = instances
+    messages_to_send = []
 
-    output_sqs_queue = []
-    count = len(filtered_instances) if args.instances == 'all' else min(int(args.instances), len(filtered_instances))
-    for i in random.sample(xrange(len(filtered_instances)), count):
-        enriched_instance = enriched_instances[i]
+    for enriched_instance in filtered_instances:
         root_logger.debug('Enriched instance: %s', json.dumps(enriched_instance, indent=4))
 
         target_ip = enriched_instance.get("privateIpAddress", enriched_instance.get("publicIpAddress"))
@@ -82,11 +101,12 @@ if __name__ == '__main__':
         target_ports.sort()
 
         if target_ip and target_ports:
-            output_sqs_queue.append({"type": "nessus_scan",
+            messages_to_send.append({"type": "nessus_scan",
                                      "targets": [target_ip],
                                      "nessus_ports": ",".join(str(p) for p in target_ports),
                                      "policy_id": args.policy_id,
-                                     "scan_name": args.scan_name})
+                                     "scan_name": "%s %s %s" % (
+                                         args.scan_name, enriched_instance.get("service_type"), target_ports)})
 
         target_elbs = enriched_instance.get("elbs", []) or []
         for elb in target_elbs:
@@ -94,13 +114,14 @@ if __name__ == '__main__':
             target_ports = elb.get("ports", [])
             target_ports.sort(key=int)
             if target_host and target_ports:
-                output_sqs_queue.append({"type": "nessus_scan",
+                messages_to_send.append({"type": "nessus_scan",
                                          "targets": [target_host],
                                          "nessus_ports": ",".join(str(p) for p in target_ports),
                                          "policy_id": args.policy_id,
-                                         "scan_name": "%s - ELB" % args.scan_name})
+                                         "scan_name": "%s %s %s - ELB" % (
+                                             args.scan_name, enriched_instance.get("service_type"), target_ports)})
 
-    for event in output_sqs_queue:
+    for event in messages_to_send:
         root_logger.info('Sending event to SQS queue: %s' % event)
         message = boto.sqs.message.RawMessage()
         message.set_body(json.dumps(event))
