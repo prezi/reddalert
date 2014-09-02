@@ -2,9 +2,6 @@
 import json
 import time
 import calendar
-import os
-import sys
-import inspect
 
 
 class Reddalert:
@@ -105,8 +102,6 @@ if __name__ == '__main__':
     # Setup the alerter
     output_targets = Reddalert.get_config('output', config, args.output, 'stdout')
     alerter = Alerter(output_targets)
-
-    # print 'config', config
 
     # Setup the Coordinator
     coordinator = Coordinator(edda_client, alerter, config, status)
