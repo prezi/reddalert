@@ -124,3 +124,21 @@ class InstanceEnricherTestCase(unittest.TestCase):
         self.edda_client.query = Mock(return_value=[{"ipPermissions": [{"ipRanges": ['1','2'], "toPort": '22'}], "groupId": "G"}])
         self.assertEqual([], self.instance_enricher._clean_ip_permissions([{"ipRanges": [], "toPort": None}]))
         self.assertEquals({"G": []}, self.instance_enricher._query_security_groups()) #shall not throw exception
+
+    def test_tag_extraction(self):
+        tags = [
+            {
+                "value": "nessus",
+                "key": "Name",
+                "class": "com.amazonaws.services.ec2.model.Tag",
+                "Name": "nessus"
+            },
+            {
+                "value": "nessus",
+                "service_name": "nessus",
+                "key": "service_name",
+                "class": "com.amazonaws.services.ec2.model.Tag"
+            }
+        ]
+        name = self.instance_enricher._get_type_from_tags(tags)
+        self.assertEqual("nessus", name)

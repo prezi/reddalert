@@ -49,9 +49,9 @@ class InstanceEnricher:
     def _get_type_from_tags(self, tags):
         LOOKUP_ORDER = ["service_name", "Name", "aws:cloudformation:stack-name", "aws:autoscaling:groupName"]
         for tag_name in LOOKUP_ORDER:
-            for tag in tags:
-                if tag.get("key") == tag_name:
-                    return tag.get("value")
+            matches = [t.get("value") for t in tags if t.get("key") == tag_name]
+            if matches:
+                return matches[0]
         return None
 
     def report(self, instance_data, extra={}):
