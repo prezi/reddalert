@@ -57,11 +57,11 @@ class PluginNonChefTestCase(unittest.TestCase):
 
             # run the tested method
             self.assertEqual(list(self.plugin.do_run()), [
-                             {'id': 'keyName1', 'plugin_name': 'non_chef', 'details': [
+                             {'id': 'keyName1-tag1', 'plugin_name': 'non_chef', 'details': [
                               {'tags': {'Name': 'tag1'}, 'instanceId': 'a', 'keyName': 'keyName1', 'securityGroups': [],
                                'publicIpAddress': '1.1.1.1', 'privateIpAddress': '10.1.1.1', 'elbs': [], 'open_ports': [],
                                'service_type': 'tag1', 'started': 0}]},
-                             {'id': 'keyName2', 'plugin_name': 'non_chef', 'details': [
+                             {'id': 'keyName2-foo', 'plugin_name': 'non_chef', 'details': [
                               {'tags': {'service_name': 'foo'}, 'instanceId': 'b', 'keyName': 'keyName2', 'securityGroups': [],
                                'publicIpAddress': '2.1.1.1', 'privateIpAddress': '10.1.1.2', 'elbs': [], 'open_ports': [],
                                'service_type': 'foo', 'started': 0}]}
@@ -104,11 +104,11 @@ class PluginNonChefTestCase(unittest.TestCase):
 
             # run the tested method
             self.assertEqual(list(self.plugin.do_run()), [
-                             {'id': 'keyName1', 'plugin_name': 'non_chef', 'details': [
+                             {'id': 'keyName1-tag1', 'plugin_name': 'non_chef', 'details': [
                               {'tags': {'Name': 'tag1'}, 'instanceId': 'a', 'keyName': 'keyName1', 'securityGroups': [],
                                'publicIpAddress': '1.1.1.1', 'privateIpAddress': '10.1.1.1', 'service_type': 'tag1',
                                'elbs': [], 'open_ports': [], 'started': 12}]},
-                             {'id': 'keyName2', 'plugin_name': 'non_chef', 'details': [
+                             {'id': 'keyName2-foo', 'plugin_name': 'non_chef', 'details': [
                               {'tags': {'service_name': 'foo'}, 'instanceId': 'b', 'keyName': 'keyName2', 'securityGroups': [],
                                'publicIpAddress': '2.1.1.1', 'privateIpAddress': '10.1.1.2', 'service_type': 'foo',
                                'elbs': [], 'open_ports': [], 'started': 13}]}
