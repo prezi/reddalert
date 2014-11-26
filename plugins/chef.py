@@ -68,6 +68,6 @@ class NonChefPlugin:
                 details = self.instance_enricher.report(machine, extra=extra_details)
                 yield {
                     "plugin_name": self.plugin_name,
-                    "id": machine.get('keyName', machine['instanceId']),
+                    "id": "%s-%s" % (machine.get('keyName', machine['instanceId']), machine.get("service_type", "unknown_service")),
                     "details": [details]
                 }
