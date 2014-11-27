@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 import logging
 import hashlib
+import re
 import urllib2
 from chef import Search, ChefAPI
 from multiprocessing import Pool
@@ -122,9 +123,9 @@ class Route53Changed:
         exempts = self.config.get("exception_domains", [])
         dns_names = self.load_known_dns()
         not_aws = {name: entry for name, entry in dns_names.iteritems()
-                   if is_external(entry, ips, legit_domains)}
-        locations_http = ["http://%s" % name for name in not_aws.keys() if name not in exempts]
-        locations_https = ["https://%s" % name for name in not_aws.keys() if name not in exempts]
+                   if is_external(entry, ips, legit_domains) and name not in exempts}
+        locations_http = ["http://%s" % name for name in not_aws.keys()]
+        locations_https = ["https://%s" % name for name in not_aws.keys()]
         locations = list(locations_http + locations_https)
         self.logger.info("fetching %d urls on 16 threads" % len(locations))
         hashed_items = Pool(16).map(page_hash, locations)
@@ -133,10 +134,12 @@ class Route53Changed:
         alerts = {loc: h for loc, h in hashes.iteritems() if loc not in old_hashes or old_hashes[loc] != h}
         self.status["hashes"] = hashes
         for location, hashed in alerts.iteritems():
+            dns_name = "%s." % re.search('http[s]*://(.*)', location).group(1)
+            dns_entry_info = not_aws.get(dns_name,"no_dns_entry_info_found")
             yield {
                 "plugin_name": self.plugin_name,
                 "id": location,
-                "details": ("new page",) if location not in old_hashes else ("page changed",)
+                "details": ("new page (dns entry info: %s)" % str(dns_entry_info),) if location not in old_hashes else ("page changed (%s)" % str(dns_entry_info),)
             }
 
     def load_aws_ips(self):
