@@ -41,7 +41,13 @@ class NonChefPlugin:
         return list(self.do_run()) if self.api else []
 
     def do_run(self):
+        # NOTE! an instance has 3 hours to register itself to chef!
+        aws_to_chef_delay = 3 * 60 * 60 * 1000
         since = self.edda_client._since or 0
+        until = self.edda_client._until or (since + 30 * 60 * 3600)
+        check_since = since - aws_to_chef_delay
+        check_until = until - aws_to_chef_delay
+
         chef_hosts = {row['automatic']['cloud']['public_ipv4']: row['name']
                       for row in Search('node', 'ec2:*', rows=1000, api=self.api)
                       if 'cloud' in row.get('automatic', {}) and    # only store EC2 instances
@@ -49,17 +55,16 @@ class NonChefPlugin:
                       }
 
         # print chef_hosts
-
-        for machine in self.edda_client.clean().query("/api/v2/view/instances;_expand"):
-            launchTime = int(machine.get("launchTime", 0))
+        for machine in self.edda_client.soft_clean().query("/api/v2/view/instances;_expand;_at=%s"):
+            launch_time = int(machine.get("launchTime", 0))
 
             # convert list of tags to a more readable dict
             tags = {tag['key']: tag['value'] for tag in machine.get('tags', []) if 'key' in tag and 'value' in tag}
-            if machine['publicIpAddress'] not in chef_hosts and launchTime >= since and \
+            if machine['publicIpAddress'] not in chef_hosts and check_since <= launch_time <= check_until and \
                     not self.is_excluded_instance(tags.get('service_name', None) or tags.get('Name', None)) and \
                     machine['instanceId'] not in self.status['first_seen']:
                 # found a non-chef managed host which has not been seen before and which is not excluded
-                self.status['first_seen'][machine['instanceId']] = launchTime
+                self.status['first_seen'][machine['instanceId']] = launch_time
                 extra_details = {
                     'tags': tags,
                     'keyName': machine.get('keyName', None),
