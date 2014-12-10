@@ -55,7 +55,7 @@ class NonChefPlugin:
                       }
 
         # print chef_hosts
-        for machine in self.edda_client.soft_clean().query("/api/v2/view/instances;_expand;_at=%s"):
+        for machine in self.edda_client.soft_clean().query("/api/v2/view/instances;_expand"):
             launch_time = int(machine.get("launchTime", 0))
 
             # convert list of tags to a more readable dict
