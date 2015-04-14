@@ -54,7 +54,7 @@ class PluginNewInstanceTagTestCase(unittest.TestCase):
         eddaclient.clean = Mock(return_value=m)
         eddaclient.soft_clean = Mock(return_value=m1)
 
-        self.plugin.init(eddaclient, {}, {})
+        self.plugin.init(eddaclient, {'godauth_url': '', 'sso_url': ''}, {})
 
         # run the tested method
         result = self.plugin.run()
