@@ -59,10 +59,10 @@ class PluginNewInstanceTagTestCase(unittest.TestCase):
         # run the tested method
         result = self.plugin.run()
         result = list(result)
-        self.assertEqual(3, len(result))
+        self.assertEqual(1, len(result))
         result = result[0]
-        self.assertEqual("This domain (https://info.prezi.com) is using GODAUTH", result["details"])
-        self.assertEqual("https://info.prezi.com", result["id"])
+        self.assertEqual("This domain (http://info.prezi.com) is neither behind SSO nor GODAUTH", result["details"])
+        self.assertEqual("http://info.prezi.com", result["id"])
 
         m.query.assert_has_calls([call('/api/v2/aws/hostedRecords;_expand')])
 
