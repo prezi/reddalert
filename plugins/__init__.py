@@ -20,5 +20,5 @@ plugin_list = {
     'non_chef': NonChefPlugin(),
     'route53unknown': Route53Unknown(),
     'route53changed': Route53Changed(),
-    'sss_unprotected': SSOUnprotected()
+    'sso_unprotected': SSOUnprotected()
 }
