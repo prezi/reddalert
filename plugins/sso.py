@@ -90,7 +90,7 @@ class SSOUnprotected:
                 yield {
                     "plugin_name": self.plugin_name,
                     "id": location,
-                    "details": "This domain (%s) is neither behind SSO nor GODAUTH" % location
+                    "details": list(["This domain (%s) is neither behind SSO nor GODAUTH" % location])
                 }
             # elif redirect.startswith(self.GODAUTH_URL):
             #     yield {
