@@ -41,8 +41,8 @@ def page_redirects(location):
 class SSOUnprotected:
 
     UNPROTECTED = 'unprotected'
-    SSO_URL = 'https://sso.prezi.com/auth/?redirect_uri='
-    GODAUTH_URL = 'https://prezi.com/api/v2/auth/godauth/?ref='
+    SSO_URL = ''
+    GODAUTH_URL = ''
 
     def __init__(self):
         self.plugin_name = 'sso_unprotected'
@@ -55,6 +55,8 @@ class SSOUnprotected:
         self._initialize_status()
 
     def _initialize_status(self):
+        SSOUnprotected.GODAUTH_URL = self.config['godauth_url']
+        SSOUnprotected.SSO_URL = self.config['sso_url']
         if 'redirects' not in self.status:
             self.status['redirects'] = []
 

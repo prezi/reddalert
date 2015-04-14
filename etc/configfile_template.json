@@ -18,6 +18,13 @@
     "plugin.secgroups": {
       "allowed_ports": [22]
     },
+   "plugin.sso_unprotected": {
+      "godauth_url": "",
+      "sso_url": "",
+      "zone": "",
+      "legit_domains": [],
+      "exception_domains": []
+    },
     "plugin.iam": {
         "allowed": [
             "^.*Deployment$"
