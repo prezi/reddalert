@@ -4,6 +4,7 @@ import unittest
 from mock import Mock, call
 from httpretty import HTTPretty, httprettified
 from plugins import SSOUnprotected
+import plugins.sso
 
 
 class PluginNewInstanceTagTestCase(unittest.TestCase):
@@ -71,6 +72,10 @@ class PluginNewInstanceTagTestCase(unittest.TestCase):
         # run the tested method
         result = self.plugin.run()
         result = list(result)
+        self.assertEqual(('https://info1.prezi.com', SSOUnprotected.SSO_URL + "https://info1.prezi.com"), plugins.sso.page_redirects('https://info1.prezi.com'))
+        self.assertEqual(('http://info1.prezi.com', "https://info1.prezi.com"), plugins.sso.page_redirects('http://info1.prezi.com'))
+        self.assertEqual(('https://info.prezi.com', SSOUnprotected.GODAUTH_URL + "https://info.prezi.com"), plugins.sso.page_redirects('https://info.prezi.com'))
+        self.assertEqual(('http://bla.prezi.com', '-'), plugins.sso.page_redirects('http://bla.prezi.com'))
         self.assertEqual(1, len(result))
         result = result[0]
         self.assertEqual(["This domain (http://info.prezi.com) is neither behind SSO nor GODAUTH"], result["details"])
