@@ -90,18 +90,18 @@ class SSOUnprotected:
                     "id": location,
                     "details": "This domain (%s) is neither behind SSO nor GODAUTH" % location
                 }
-            elif redirect.startswith(self.GODAUTH_URL):
-                yield {
-                    "plugin_name": self.plugin_name,
-                    "id": location,
-                    "details": "This domain (%s) is using GODAUTH" % location
-                }
-            else:
-                yield {
-                    "plugin_name": self.plugin_name,
-                    "id": location,
-                    "details": "This domain (%s) is not reachable" % location
-                }
+            # elif redirect.startswith(self.GODAUTH_URL):
+            #     yield {
+            #         "plugin_name": self.plugin_name,
+            #         "id": location,
+            #         "details": "This domain (%s) is using GODAUTH" % location
+            #     }
+            # else:
+            #     yield {
+            #         "plugin_name": self.plugin_name,
+            #         "id": location,
+            #         "details": "This domain (%s) is not reachable" % location
+            #     }
 
     def load_aws_ips(self):
         aws_machines = self.edda_client.soft_clean().query("/api/v2/view/instances;_expand")
