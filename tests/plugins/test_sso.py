@@ -2,7 +2,7 @@
 import unittest
 
 from mock import Mock, call
-import plugins.sso
+from httpretty import HTTPretty, httprettified
 from plugins import SSOUnprotected
 
 
@@ -11,14 +11,17 @@ class PluginNewInstanceTagTestCase(unittest.TestCase):
         self.plugin = SSOUnprotected()
         self.assertEqual(self.plugin.plugin_name, 'sso_unprotected')
 
+    @httprettified
     def test_run(self, *mocks):
         eddaclient = Mock()
         eddaclient._since = 500
 
         def ret_list(args):
             return [
-                {'name': 'info.prezi.com', 'instanceId': 'a', 'launchTime': 400, "resourceRecords": [{"value": "127.0.0.2"}]},
-                {'name': 'info1.prezi.com', 'instanceId': 'b', 'launchTime': 600, "resourceRecords": [{"value": "127.0.0.2"}]},
+                {'name': 'info.prezi.com', 'instanceId': 'a', 'launchTime': 400,
+                 "resourceRecords": [{"value": "127.0.0.2"}]},
+                {'name': 'info1.prezi.com', 'instanceId': 'b', 'launchTime': 600,
+                 "resourceRecords": [{"value": "127.0.0.2"}]},
             ]
 
         def public_ip(args):
@@ -31,22 +34,6 @@ class PluginNewInstanceTagTestCase(unittest.TestCase):
                  "resourceRecords": [{"value": "127.0.0.3.prezi.com"}, {"value": "127.0.0.4"}]},
             ]
 
-        def page_redirects_mock(location):
-            if location == "http://info.prezi.com":
-                code = 200
-                return SSOUnprotected.UNPROTECTED
-            if location == "https://info.prezi.com":
-                code = 302
-                return SSOUnprotected.GODAUTH_URL + "https://info.prezi.com"
-            if location == "http://info1.prezi.com":
-                code = 302
-                return "https://info1.prezi.com"
-            if location == "https://info1.prezi.com":
-                code = 302
-                return SSOUnprotected.SSO_URL + "https://info1.prezi.com"
-
-        plugins.sso.page_redirects = page_redirects_mock
-
         m = Mock()
         m.query = Mock(side_effect=ret_list)
         m1 = Mock()
@@ -54,14 +41,39 @@ class PluginNewInstanceTagTestCase(unittest.TestCase):
         eddaclient.clean = Mock(return_value=m)
         eddaclient.soft_clean = Mock(return_value=m1)
 
-        self.plugin.init(eddaclient, {'godauth_url': '', 'sso_url': ''}, {})
+        self.plugin.init(eddaclient, {'godauth_url': 'https://god.com/?red=', 'sso_url': 'https://sso.com/?red='}, {})
+
+        HTTPretty.register_uri(HTTPretty.GET, 'http://info.prezi.com',
+                               body='[{"title": "Test Deal"}]',
+                               adding_headers={
+                                   'Location': 'None'
+                               },
+                               status=200)
+        HTTPretty.register_uri(HTTPretty.GET, 'https://info.prezi.com',
+                               body='[{"title": "Test Deal"}]',
+                               adding_headers={
+                                   'Location': SSOUnprotected.GODAUTH_URL + "https://info.prezi.com"
+                               },
+                               status=302)
+        HTTPretty.register_uri(HTTPretty.GET, 'http://info1.prezi.com',
+                               body='[{"title": "Test Deal"}]',
+                               adding_headers={
+                                   'Location': 'https://info1.prezi.com'
+                               },
+                               status=302)
+        HTTPretty.register_uri(HTTPretty.GET, 'https://info1.prezi.com',
+                               body='[{"title": "Test Deal"}]',
+                               adding_headers={
+                                   'Location': SSOUnprotected.SSO_URL + "https://info1.prezi.com"
+                               },
+                               status=302)
 
         # run the tested method
         result = self.plugin.run()
         result = list(result)
         self.assertEqual(1, len(result))
         result = result[0]
-        self.assertEqual("This domain (http://info.prezi.com) is neither behind SSO nor GODAUTH", result["details"])
+        self.assertEqual(["This domain (http://info.prezi.com) is neither behind SSO nor GODAUTH"], result["details"])
         self.assertEqual("http://info.prezi.com", result["id"])
 
         m.query.assert_has_calls([call('/api/v2/aws/hostedRecords;_expand')])
