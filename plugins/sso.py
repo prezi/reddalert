@@ -60,11 +60,13 @@ class SSOUnprotected:
         alerts = {loc: r for loc, r in redirects.iteritems()
                   if loc not in old_redirects
                   or old_redirects[loc] != r
-                  or self.SSO_URL + loc != r}
+                  }
         self.status["redirects"] = redirects
         for location, redirect in alerts.iteritems():
             loc_re = re.search('(http[s]*)://(.*)', location)
             red_re = re.search('(http[s]*)://(.*)', redirect)
+            if self.SSO_URL + location == redirect:
+                continue
             if red_re and loc_re.group(2) == red_re.group(2) and red_re.group(1) == 'https' and loc_re.group(1) == 'http':
                 continue
 
