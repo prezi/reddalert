@@ -75,6 +75,10 @@ class PluginNonChefTestCase(unittest.TestCase):
                 {'keyName': 'keyName3', 'instanceId': 'c', 'privateIpAddress': '10.1.1.3', 'publicIpAddress': '3.1.1.1',
                  'launchTime': 1 * 3600000},
                 {'keyName': 'keyName4', 'instanceId': 'd', 'privateIpAddress': '10.1.1.4', 'publicIpAddress': '4.1.1.1',
+                 'launchTime': 1 * 3600000},
+                {'keyName': 'keyName5', 'instanceId': 'e', 'privateIpAddress': 'null', 'publicIpAddress': 'null',
+                 'launchTime': 1 * 3600000},
+                {'keyName': 'keyName6', 'instanceId': 'f', 'privateIpAddress': None, 'publicIpAddress': None,
                  'launchTime': 1 * 3600000}
             ]
 
@@ -89,7 +93,7 @@ class PluginNonChefTestCase(unittest.TestCase):
                 {'name': 'host0', 'automatic': {'cloud': {'public_ipv4': '1.1.1.1'}}},
                 {'name': 'host1', 'automatic': {'cloud': {'public_ipv4': '2.1.1.1'}}},
                 {'name': 'host2', 'automatic': {'cloud': {'public_ipv4': '5.1.1.1'}}},
-            ]
+                ]
 
         with patch('plugins.chef.Search', side_effect=chef_list) as MockClass:
             self.plugin.init(eddaclient, self.config, {}, instance_enricher)
