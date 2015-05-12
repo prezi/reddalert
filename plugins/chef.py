@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+    #!/usr/bin/env python
 
 from __future__ import absolute_import
 import logging
@@ -62,7 +62,8 @@ class NonChefPlugin:
             tags = {tag['key']: tag['value'] for tag in machine.get('tags', []) if 'key' in tag and 'value' in tag}
             if machine['publicIpAddress'] not in chef_hosts and check_since <= launch_time <= check_until and \
                     not self.is_excluded_instance(tags.get('service_name', None) or tags.get('Name', None)) and \
-                    machine['instanceId'] not in self.status['first_seen']:
+                    machine['instanceId'] not in self.status['first_seen'] and machine['publicIpAddress'] != 'null' \
+                    and machine['publicIpAddress'] is not None:
                 # found a non-chef managed host which has not been seen before and which is not excluded
                 self.status['first_seen'][machine['instanceId']] = launch_time
                 extra_details = {
