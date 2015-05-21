@@ -113,12 +113,16 @@ class SecurityHeaders(BaseClass):
         self.edda_client = edda_client
         self.config = config
         self.status = status
+        self.already_checked = self.status.setdefault('already_checked', [])
 
     def run(self):
         for location, response in self.get_all_my_domains_response().iteritems():
-            if not response['headers'].get('x-frame-options') and 200 <= response['code'] < 300:
+            if location not in self.already_checked and \
+                    not response['headers'].get('x-frame-options') and 200 <= response['code'] < 300:
+                self.already_checked.append(location)
                 yield {
                     "plugin_name": self.plugin_name,
                     "id": location,
                     "details": list(["This webpage (%s) does not have X-Frame-Options header" % location])
                 }
+        self.status['already_checked'] = self.already_checked
