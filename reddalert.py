@@ -75,6 +75,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     root_logger = logging.getLogger()
+
     # create formatter and add it to the handlers
     formatter = logging.Formatter('%(asctime)s %(processName)-10s %(name)s %(levelname)-8s %(message)s')
     # create console handler with a higher log level
@@ -82,11 +83,14 @@ if __name__ == '__main__':
     ch.setFormatter(formatter)
     # Setup logger output
     root_logger.addHandler(ch)
+
     # Supress logging
     if args.silent:
         root_logger.setLevel(logging.WARNING)
     else:
         root_logger.setLevel(logging.DEBUG)
+
+    root_logger.info('Called with %s', args)
 
     # Load configuration:
     config = Reddalert.load_json(args.configfile, root_logger)
