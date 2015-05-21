@@ -1,10 +1,10 @@
-from __future__ import absolute_import
 import logging
-import re
-import requests
 import urllib
 from multiprocessing import Pool
-from plugins.route53 import load_route53_entries, is_external
+
+import re
+import requests
+from .route53 import load_route53_entries, is_external
 
 
 def page_redirects(location):
@@ -22,7 +22,6 @@ def page_redirects(location):
 
 
 class SSOUnprotected:
-
     UNPROTECTED = 'unprotected'
     SSO_URL = ''
     GODAUTH_URL = ''
@@ -57,17 +56,18 @@ class SSOUnprotected:
         redirect_items = Pool(16).map(page_redirects, locations)
         redirects = dict(redirect_items)
         old_redirects = self.status.get("redirects", {})
-        alerts = {loc: r for loc, r in redirects.iteritems()
-                  if loc not in old_redirects
-                  or old_redirects[loc] != r
-                  }
+        alerts = {
+            loc: r for loc, r in redirects.iteritems()
+            if loc not in old_redirects or old_redirects[loc] != r
+        }
         self.status["redirects"] = redirects
         for location, redirect in alerts.iteritems():
             loc_re = re.search('(http[s]*)://(.*)', location)
             red_re = re.search('(http[s]*)://(.*)', redirect)
             if self.SSO_URL + location == redirect:
                 continue
-            if red_re and loc_re.group(2) == red_re.group(2) and red_re.group(1) == 'https' and loc_re.group(1) == 'http':
+            if red_re and loc_re.group(2) == red_re.group(2) and red_re.group(1) == 'https' and loc_re.group(
+                    1) == 'http':
                 continue
 
             if redirect == self.UNPROTECTED:
@@ -76,18 +76,6 @@ class SSOUnprotected:
                     "id": location,
                     "details": list(["This domain (%s) is neither behind SSO nor GODAUTH" % location])
                 }
-            # elif redirect.startswith(self.GODAUTH_URL):
-            #     yield {
-            #         "plugin_name": self.plugin_name,
-            #         "id": location,
-            #         "details": list(["This domain (%s) is using GODAUTH" % location])
-            #     }
-            # else:
-            #     yield {
-            #         "plugin_name": self.plugin_name,
-            #         "id": location,
-            #         "details": list(["This domain (%s) is not reachable" % location])
-            #     }
 
     def load_aws_ips(self):
         aws_machines = self.edda_client.soft_clean().query("/api/v2/view/instances;_expand")
