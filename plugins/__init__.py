@@ -6,7 +6,7 @@ from s3acl import S3AclPlugin
 from secgroups import SecurityGroupPlugin
 from chef import NonChefPlugin
 from route53 import Route53Unknown, Route53Changed
-from sso import SSOUnprotected
+from sso import SSOUnprotected, SecurityHeaders
 
 
 plugin_list = {
@@ -20,5 +20,6 @@ plugin_list = {
     'non_chef': NonChefPlugin(),
     'route53unknown': Route53Unknown(),
     'route53changed': Route53Changed(),
-    'sso_unprotected': SSOUnprotected()
+    'sso_unprotected': SSOUnprotected(),
+    'security_headers': SecurityHeaders()
 }
