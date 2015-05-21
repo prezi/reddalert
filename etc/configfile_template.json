@@ -1,62 +1,91 @@
 {
-    "edda": "http://localhost:8080/edda",
-    "output": "stdout",
-    "store-until": true,
-    "es_host": "localhost",
-    "es_port": 9200,
-    "email_from": "reddalert@localhost",
-    "email_to": ["root@localhost"],
-    "email_subject": "[reddalert] Report",
-    "plugin.ami": {
-        "allowed_tags": [
-            "jenkins"
-        ]
-    },
-    "plugin.elbs": {
-        "allowed_ports": [80, 443]
-    },
-    "plugin.secgroups": {
-      "allowed_ports": [22]
-    },
-   "plugin.sso_unprotected": {
-      "godauth_url": "",
-      "sso_url": "",
-      "zone": "",
-      "legit_domains": [],
-      "exception_domains": []
-    },
-    "plugin.iam": {
-        "allowed": [
-            "^.*Deployment$"
-        ]
-    },
-    "plugin.s3acl": {
-        "user": "<aws_access_key_id>",
-        "key": "<aws_secret_access_key>",
-        "excluded_buckets": [
-            "cached\\w*"
-        ],
-        "excluded_keys": [
-            "^.*tmp_\\w*.json$"
-        ],
-        "allowed": [
-            {"uid": "deadbeef", "op": "READ"},
-            {"uid": "deadbeef", "op": "READ"},
-            {"uid": "deadbeef", "op": "READ_ACP"},
-            {"uid": "deadbeef", "op": "WRITE"},
-            {"uid": "deadbeef", "op": "WRITE_ACP"},
-            {"uid": "deadbeef", "op": "FULL_CONTROL"}
-        ],
-        "allowed_specific": {
-            "foobar": [
-                {"uid": "deadbeef", "op": "FULL_CONTROL"}
-            ]
+  "edda": "http://localhost:8080/edda",
+  "output": "stdout",
+  "store-until": true,
+  "es_host": "localhost",
+  "es_port": 9200,
+  "email_from": "reddalert@localhost",
+  "email_to": ["root@localhost"],
+  "email_subject": "[reddalert] Report",
+  "plugin.ami": {
+    "allowed_tags": [
+      "jenkins"
+    ]
+  },
+  "plugin.elbs": {
+    "allowed_ports": [
+      80,
+      443
+    ]
+  },
+  "plugin.secgroups": {
+    "allowed_ports": [22]
+  },
+  "plugin.sso_unprotected": {
+    "godauth_url": "",
+    "sso_url": "",
+    "zone": "",
+    "legit_domains": [],
+    "exception_domains": []
+  },
+  "plugin.security_headers": {
+    "zone": "",
+    "legit_domains": [],
+    "exception_domains": []
+  },
+  "plugin.iam": {
+    "allowed": [
+      "^.*Deployment$"
+    ]
+  },
+  "plugin.s3acl": {
+    "user": "<aws_access_key_id>",
+    "key": "<aws_secret_access_key>",
+    "excluded_buckets": [
+      "cached\\w*"
+    ],
+    "excluded_keys": [
+      "^.*tmp_\\w*.json$"
+    ],
+    "allowed": [
+      {
+        "uid": "deadbeef",
+        "op": "READ"
+      },
+      {
+        "uid": "deadbeef",
+        "op": "READ"
+      },
+      {
+        "uid": "deadbeef",
+        "op": "READ_ACP"
+      },
+      {
+        "uid": "deadbeef",
+        "op": "WRITE"
+      },
+      {
+        "uid": "deadbeef",
+        "op": "WRITE_ACP"
+      },
+      {
+        "uid": "deadbeef",
+        "op": "FULL_CONTROL"
+      }
+    ],
+    "allowed_specific": {
+      "foobar": [
+        {
+          "uid": "deadbeef",
+          "op": "FULL_CONTROL"
         }
-    },
-    "plugin.chef": {
-        "chef_server_url": "https://api.opscode.com/organizations/xxx",
-        "client_key_file": "/etc/chef/client.pem",
-        "client_name": "foo",
-        "excluded_instances": ["jenkins"]
+      ]
     }
+  },
+  "plugin.chef": {
+    "chef_server_url": "https://api.opscode.com/organizations/xxx",
+    "client_key_file": "/etc/chef/client.pem",
+    "client_name": "foo",
+    "excluded_instances": ["jenkins"]
+  }
 }
