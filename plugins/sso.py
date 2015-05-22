@@ -76,7 +76,7 @@ class SSOUnprotected(BaseClass):
 
     def run(self):
         responses = self.get_all_my_domains_response()
-        redirects = {url: urllib.unquote(response['headers'].get('location'))
+        redirects = {url: urllib.unquote(response['headers'].get('location', ''))
                      for url, response in responses.iteritems()}
 
         old_redirects = self.status.get("redirects", {})
