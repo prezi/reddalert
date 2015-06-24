@@ -27,6 +27,12 @@ class PluginSsoTestCase(unittest.TestCase):
                  "resourceRecords": [{"value": "127.0.0.2"}]},
                 {'name': 'prezi-sso.prezi.com', 'instanceId': 'b', 'launchTime': 600,
                  "resourceRecords": [{"value": "127.0.0.2"}]},
+                {'name': 'full-https2.prezi.com', 'instanceId': 'a', 'launchTime': 400,
+                 "resourceRecords": [{"value": "127.0.0.2"}]},
+                {'name': 'full-https3.prezi.com', 'instanceId': 'a', 'launchTime': 400,
+                 "resourceRecords": [{"value": "127.0.0.2"}]},
+                {'name': 'tbd-https.prezi.com', 'instanceId': 'a', 'launchTime': 400,
+                 "resourceRecords": [{"value": "127.0.0.2"}]},
             ]
 
         def public_ip(args):
@@ -76,6 +82,12 @@ class PluginSsoTestCase(unittest.TestCase):
                                body='[{"title": "Test Deal"}]',
                                adding_headers={
                                    'Location': 'https://full-https3.prezi.com'
+                               },
+                               status=302)
+        HTTPretty.register_uri(HTTPretty.GET, 'http://tbd-https.prezi.com/',
+                               body='[{"title": "Test Deal"}]',
+                               adding_headers={
+                                   'Location': 'https://tbd-https2.prezi.com'
                                },
                                status=302)
         HTTPretty.register_uri(HTTPretty.GET, 'https://prezi-sso.prezi.com',
