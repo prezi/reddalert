@@ -86,12 +86,15 @@ class SSOUnprotected(BaseClass):
         }
         self.status["redirects"] = redirects
         for tested_url, location_header in alerts.iteritems():
-
             if self.SSO_URL + tested_url == location_header or self.GODAUTH_URL + tested_url == location_header:
                 continue
 
             loc_re = re.search(r'https?://(.*)', tested_url)
             red_re = re.search(r'https?://(.*)', location_header)
+
+            if red_re and red_re.group(1).startswith('tbd-'):
+                continue
+
             if red_re and loc_re:
                 tested_domain = loc_re.group(1)
                 https_tested_domain = 'https://' + tested_domain
