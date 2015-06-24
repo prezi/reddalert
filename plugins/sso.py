@@ -39,7 +39,7 @@ class BaseClass:
         legit_domains = self.config.get("legit_domains", [])
         exempts = self.config.get("exception_domains", [])
         dns_names = self.load_known_dns()
-        return [name for name, entry in dns_names.iteritems()
+        return [name.rstrip('.') for name, entry in dns_names.iteritems()
                 if is_external(entry, ips, legit_domains) and name not in exempts]
 
     def get_all_my_domains_response(self):
@@ -85,22 +85,24 @@ class SSOUnprotected(BaseClass):
             if loc not in old_redirects or old_redirects[loc] != redirect_url
         }
         self.status["redirects"] = redirects
-        for location, redirect_url in alerts.iteritems():
+        for tested_url, location_header in alerts.iteritems():
 
-            loc_re = re.search('(https?)://(.*)', location)
-            red_re = re.search('(https?)://(.*)', redirect_url)
-            if self.SSO_URL + location == redirect_url or self.GODAUTH_URL + location == redirect_url:
+            if self.SSO_URL + tested_url == location_header or self.GODAUTH_URL + tested_url == location_header:
                 continue
 
-            if red_re and loc_re.group(2) == red_re.group(2) and red_re.group(1) == 'https' and loc_re.group(
-                    1) == 'http':
-                continue
+            loc_re = re.search(r'https?://(.*)', tested_url)
+            red_re = re.search(r'https?://(.*)', location_header)
+            if red_re and loc_re:
+                tested_domain = loc_re.group(1)
+                redirect_domain = red_re.group(1)
+                if redirect_domain == 'https://' + tested_domain:
+                    continue
 
             yield {
                 "plugin_name": self.plugin_name,
-                "id": location,
+                "id": tested_url,
                 "details": list(["This domain (%s) is neither behind SSO nor GODAUTH because redirects to %s" % (
-                    location, redirect_url)])
+                    tested_url, location_header)])
             }
 
 
