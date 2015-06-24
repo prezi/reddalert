@@ -94,8 +94,8 @@ class SSOUnprotected(BaseClass):
             red_re = re.search(r'https?://(.*)', location_header)
             if red_re and loc_re:
                 tested_domain = loc_re.group(1)
-                redirect_domain = red_re.group(1)
-                if redirect_domain == 'https://' + tested_domain:
+                https_tested_domain = 'https://' + tested_domain
+                if location_header.startswith(https_tested_domain) or https_tested_domain.startswith(location_header):
                     continue
 
             yield {

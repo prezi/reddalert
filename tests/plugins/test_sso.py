@@ -66,6 +66,18 @@ class PluginSsoTestCase(unittest.TestCase):
                                    'Location': 'https://full-https.prezi.com'
                                },
                                status=302)
+        HTTPretty.register_uri(HTTPretty.GET, 'http://full-https2.prezi.com',
+                               body='[{"title": "Test Deal"}]',
+                               adding_headers={
+                                   'Location': 'https://full-https2.prezi.com/'
+                               },
+                               status=302)
+        HTTPretty.register_uri(HTTPretty.GET, 'http://full-https3.prezi.com/',
+                               body='[{"title": "Test Deal"}]',
+                               adding_headers={
+                                   'Location': 'https://full-https3.prezi.com'
+                               },
+                               status=302)
         HTTPretty.register_uri(HTTPretty.GET, 'https://prezi-sso.prezi.com',
                                body='[{"title": "Test Deal"}]',
                                adding_headers={
