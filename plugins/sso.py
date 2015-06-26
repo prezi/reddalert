@@ -16,6 +16,8 @@ def fetch_url(location):
 
     return location, None
 
+def one_starts_with_another(one, two):
+    return one.startswith(two) or two.startswith(one)
 
 class BaseClass:
     def __init__(self):
@@ -86,7 +88,10 @@ class SSOUnprotected(BaseClass):
         }
         self.status["redirects"] = redirects
         for tested_url, location_header in alerts.iteritems():
-            if self.SSO_URL + tested_url == location_header or self.GODAUTH_URL + tested_url == location_header:
+            sso_redirect_url = self.SSO_URL + tested_url
+            godauth_redirect_url = self.GODAUTH_URL + tested_url
+            if one_starts_with_another(sso_redirect_url, location_header) or \
+                    one_starts_with_another(godauth_redirect_url, location_header):
                 continue
 
             loc_re = re.search(r'https?://(.*)', tested_url)
@@ -98,7 +103,7 @@ class SSOUnprotected(BaseClass):
             if red_re and loc_re:
                 tested_domain = loc_re.group(1)
                 https_tested_domain = 'https://' + tested_domain
-                if location_header.startswith(https_tested_domain) or https_tested_domain.startswith(location_header):
+                if one_starts_with_another(https_tested_domain, location_header):
                     continue
 
             yield {

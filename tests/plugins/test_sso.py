@@ -27,6 +27,10 @@ class PluginSsoTestCase(unittest.TestCase):
                  "resourceRecords": [{"value": "127.0.0.2"}]},
                 {'name': 'prezi-sso.prezi.com', 'instanceId': 'b', 'launchTime': 600,
                  "resourceRecords": [{"value": "127.0.0.2"}]},
+                {'name': 'prezi-sso2.prezi.com', 'instanceId': 'b', 'launchTime': 600,
+                 "resourceRecords": [{"value": "127.0.0.2"}]},
+                {'name': 'prezi-sso3.prezi.com', 'instanceId': 'b', 'launchTime': 600,
+                 "resourceRecords": [{"value": "127.0.0.2"}]},
                 {'name': 'full-https2.prezi.com', 'instanceId': 'a', 'launchTime': 400,
                  "resourceRecords": [{"value": "127.0.0.2"}]},
                 {'name': 'full-https3.prezi.com', 'instanceId': 'a', 'launchTime': 400,
@@ -94,6 +98,18 @@ class PluginSsoTestCase(unittest.TestCase):
                                body='[{"title": "Test Deal"}]',
                                adding_headers={
                                    'Location': "https://sso.com/?red=https://prezi-sso.prezi.com"
+                               },
+                               status=302)
+        HTTPretty.register_uri(HTTPretty.GET, 'https://prezi-sso2.prezi.com',
+                               body='[{"title": "Test Deal"}]',
+                               adding_headers={
+                                   'Location': "https://sso.com/?red=https://prezi-sso2.prezi.com/"
+                               },
+                               status=302)
+        HTTPretty.register_uri(HTTPretty.GET, 'https://prezi-sso3.prezi.com/',
+                               body='[{"title": "Test Deal"}]',
+                               adding_headers={
+                                   'Location': "https://sso.com/?red=https://prezi-sso3.prezi.com"
                                },
                                status=302)
 
