@@ -106,12 +106,10 @@ if __name__ == '__main__':
         from raven import Client
         from raven.handlers.logging import SentryHandler
 
-
         client = Client(args.sentry)
         handler = SentryHandler(client)
-        handler.setLevel(logging.WARNING)
+        handler.setLevel(logging.ERROR)
         root_logger.addHandler(handler)
-        client.captureMessage("Reddalert has been started.")
 
     try:
         lock_handler = LockFile(args.statusfile)
