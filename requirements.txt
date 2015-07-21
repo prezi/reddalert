@@ -3,3 +3,4 @@ boto==2.23.0
 elasticsearch
 pychef
 requests==2.6.0
+lockfile==0.10.2

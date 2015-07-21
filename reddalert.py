@@ -2,9 +2,18 @@
 import json
 import time
 import calendar
+import argparse
+import logging
+import sys
+
+from api import EddaClient, Coordinator, Alerter
+from plugins import plugin_list
+from lockfile import LockFile, LockTimeout
 
 
 class Reddalert:
+    def __init__(self, logger):
+        self.logger = logger
 
     @staticmethod
     def get_since(since):
@@ -35,6 +44,10 @@ class Reddalert:
 
     @staticmethod
     def save_json(json_file, content, logger):
+        if not content:
+            logger.warning('Got empty JSON content, not updating status file!')
+            return
+
         if json_file is not None:
             try:
                 with open(json_file, 'w') as out_data:
@@ -54,10 +67,6 @@ class Reddalert:
 
 
 if __name__ == '__main__':
-    import argparse
-    import logging
-    from api import EddaClient, Coordinator, Alerter
-    from plugins import plugin_list
 
     parser = argparse.ArgumentParser(description='Runs tests against AWS configuration')
     parser.add_argument('--configfile', '-c', default='etc/configfile.json', help='Configuration file')
@@ -84,13 +93,21 @@ if __name__ == '__main__':
     # Setup logger output
     root_logger.addHandler(ch)
 
-    # Supress logging
+    # Suppress logging
     if args.silent:
         root_logger.setLevel(logging.WARNING)
     else:
         root_logger.setLevel(logging.DEBUG)
 
     root_logger.info('Called with %s', args)
+
+    try:
+        lock_handler = LockFile(args.statusfile)
+        lock_handler.acquire(timeout=3)
+        root_logger.debug("Pid file not found, creating %s..." % lock_handler.path)
+    except LockTimeout as e:
+        root_logger.info('Locked, script running... exiting.')
+        sys.exit()
 
     # Load configuration:
     config = Reddalert.load_json(args.configfile, root_logger)
@@ -122,3 +139,6 @@ if __name__ == '__main__':
     if Reddalert.get_config('store-until', config, args.output, False):
         status['since'] = args.until
     Reddalert.save_json(args.statusfile, status, root_logger)
+
+    root_logger.info("Reddalert finished successfully.")
+    lock_handler.release()

@@ -45,10 +45,12 @@ class ReddalertTestCase(unittest.TestCase):
     def test_save_json(self):
         logger = Mock()
 
-        self.assertFalse(self.reddalert.save_json('/tmp' * 100, {}, logger))
+        self.assertFalse(self.reddalert.save_json('/tmp', {}, logger))
+        self.assertFalse(self.reddalert.save_json('/tmp' * 100, {'foo': 'bar'}, logger))
         self.assertTrue(self.reddalert.save_json('/tmp/reddalert_test.tmp', self.test_json_data, logger))
 
         self.assertEqual(logger.mock_calls, [
+            call.warning('Got empty JSON content, not updating status file!'),
             call.error("Failed to write file '%s'", '/tmp' * 100)
         ])
 
