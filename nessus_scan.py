@@ -13,6 +13,7 @@ if __name__ == '__main__':
     import itertools
     from api import EddaClient
 
+
     parser = argparse.ArgumentParser(description='Runs tests against AWS configuration')
     parser.add_argument('--configfile', '-c', default='etc/configfile.json', help='Configuration file')
     parser.add_argument('--policy-id', '-p', help='Nessus policy id used for scanning')
@@ -25,6 +26,7 @@ if __name__ == '__main__':
     # hack to avoid race condition within EDDA: it's possible instances are synced while eg security groups aren't.
     parser.add_argument('--until', '-u', default=int(time.time()) * 1000 - 5 * 60 * 1000, help='Until, epoch in ms')
     parser.add_argument('--edda', '-e', help='Edda base URL')
+    parser.add_argument('--sentry', default=None, help='Sentry url with user:pass (optional)')
     parser.add_argument('--silent', '-l', action="count", help='Supress log messages lower than warning')
     args = parser.parse_args()
 
@@ -34,13 +36,28 @@ if __name__ == '__main__':
     # create console handler with a higher log level
     ch = logging.StreamHandler()
     ch.setFormatter(formatter)
+
     # Setup logger output
     root_logger.addHandler(ch)
+
     # Supress logging
     if args.silent:
         root_logger.setLevel(logging.WARNING)
     else:
         root_logger.setLevel(logging.DEBUG)
+
+    root_logger.info('Called with %s', args)
+
+    if args.sentry:
+        from raven import Client
+        from raven.handlers.logging import SentryHandler
+
+
+        client = Client(args.sentry)
+        handler = SentryHandler(client)
+        handler.setLevel(logging.WARNING)
+        root_logger.addHandler(handler)
+        client.captureMessage("nessus_scan.py has been started.")
 
     # Load configuration:
     config = Reddalert.load_json(args.configfile, root_logger)
