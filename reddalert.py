@@ -77,6 +77,7 @@ if __name__ == '__main__':
     parser.add_argument('--until', '-u', default=int(time.time()) * 1000 - 5 * 60 * 1000, help='Until, epoch in ms')
     parser.add_argument('--store-until', action="count", help='Use file in --since to store back the until epoch')
     parser.add_argument('--edda', '-e', default=None, help='Edda base URL')
+    parser.add_argument('--sentry', default=None, help='Sentry url with user:pass (optional)')
     parser.add_argument('--output', '-o', default=None,
                         help='Comma sepparated list of outputs to use (stdout,stdout_tabsep,mail_txt,mail_html,elasticsearch)')
     parser.add_argument('--silent', '-l', action="count", help='Supress log messages lower than warning')
@@ -100,6 +101,17 @@ if __name__ == '__main__':
         root_logger.setLevel(logging.DEBUG)
 
     root_logger.info('Called with %s', args)
+
+    if args.sentry:
+        from raven import Client
+        from raven.handlers.logging import SentryHandler
+
+
+        client = Client(args.sentry)
+        handler = SentryHandler(client)
+        handler.setLevel(logging.WARNING)
+        root_logger.addHandler(handler)
+        client.captureMessage("Reddalert has been started.")
 
     try:
         lock_handler = LockFile(args.statusfile)
