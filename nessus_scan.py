@@ -57,7 +57,6 @@ if __name__ == '__main__':
         handler = SentryHandler(client)
         handler.setLevel(logging.WARNING)
         root_logger.addHandler(handler)
-        client.captureMessage("nessus_scan.py has been started.")
 
     # Load configuration:
     config = Reddalert.load_json(args.configfile, root_logger)
