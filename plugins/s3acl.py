@@ -89,7 +89,7 @@ class S3AclPlugin:
 
             return ["%s %s" % (g.id or 'Everyone', g.permission) for g in grants if self.is_suspicious(g, allowed)]
         except S3ResponseError as e:
-            self.logger.warning("ACL fetching error: %s %s", key.name, e.message)
+            self.logger.error("ACL fetching error: %s %s", key, e.message)
             return []
 
     def is_suspicious(self, grant, allowed):
