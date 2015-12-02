@@ -58,8 +58,8 @@ class PluginNonChefTestCase(unittest.TestCase):
 
             alerts = list(self.plugin.do_run())
 
-            # no valid chef data was returned, all the 4 elements are non-chef
-            self.assertEqual(4, len(alerts))
+            # no valid chef data was returned
+            self.assertEqual(0, len(alerts))
 
     @patch('plugins.chef.ChefAPI')
     def test_empty_status(self, *mocks):
