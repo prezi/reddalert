@@ -57,14 +57,6 @@ class NonChefPlugin:
                 time.sleep(5)
         return None
 
-    def get_machine_details(self, tags, machine):
-        extra_details = {
-            'tags': tags,
-            'keyName': machine.get('keyName', None),
-            'securityGroups': machine.get('securityGroups', [])
-        }
-        return self.instance_enricher.report(machine, extra=extra_details)
-
     def do_run(self):
         # NOTE! an instance has 3 hours to register itself to chef!
         aws_to_chef_delay = 3 * 60 * 60 * 1000
@@ -83,6 +75,12 @@ class NonChefPlugin:
 
             # convert list of tags to a more readable dict
             tags = {tag['key']: tag['value'] for tag in machine.get('tags', []) if 'key' in tag and 'value' in tag}
+            extra_details = {
+                'tags': tags,
+                'keyName': machine.get('keyName', None),
+                'securityGroups': machine.get('securityGroups', [])
+            }
+
             if not self.is_excluded_instance(tags.get('service_name', None) or tags.get('Name', None)) and \
                             machine['publicIpAddress'] != 'null' and machine['publicIpAddress'] is not None:
 
@@ -93,7 +91,7 @@ class NonChefPlugin:
                     # found a non-chef managed host which has not been seen before
                     self.status['first_seen'][machine['instanceId']] = launch_time
 
-                    details = self.get_machine_details(machine, tags)
+                    details = self.instance_enricher.report(machine, extra=extra_details)
                     yield {
                         "plugin_name": self.plugin_name,
                         "id": "%s-%s" % (
@@ -104,7 +102,7 @@ class NonChefPlugin:
                 elif machine['publicIpAddress'] in chef_hosts:
 
                     # found a chef managed host, create an event so we can run conformity checks on it
-                    details = self.get_machine_details(machine, tags)
+                    details = self.instance_enricher.report(machine, extra=extra_details)
                     yield {
                         "plugin_name": 'chef_managed',
                         "id": "%s-%s" % (
