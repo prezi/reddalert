@@ -46,7 +46,7 @@ class NonChefPlugin:
     def get_chef_hosts(self):
         for i in xrange(5):
             try:
-                search_result = Search('node', 'ec2:*', rows=10000, api=self.api)
+                search_result = Search('node', 'ec2:*', rows=2000, api=self.api)
                 if search_result:
                     return {row['automatic']['cloud']['public_ipv4']: row['name']
                             for row in search_result
@@ -69,6 +69,7 @@ class NonChefPlugin:
 
         if not chef_hosts:
             self.logger.warning('No chef hosts were found.')
+            return
 
         for machine in self.edda_client.soft_clean().query("/api/v2/view/instances;_expand"):
             launch_time = int(machine.get("launchTime", 0))
