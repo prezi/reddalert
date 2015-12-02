@@ -93,8 +93,7 @@ if __name__ == '__main__':
     ch.setFormatter(formatter)
     # Setup logger output
     root_logger.addHandler(ch)
-
-    # Suppress logging
+    # Supress logging
     if args.silent:
         root_logger.setLevel(logging.WARNING)
     else:
