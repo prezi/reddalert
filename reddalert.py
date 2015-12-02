@@ -6,9 +6,10 @@ import argparse
 import logging
 import sys
 
+from lockfile import LockFile, LockTimeout
+
 from api import EddaClient, Coordinator, Alerter
 from plugins import plugin_list
-from lockfile import LockFile, LockTimeout
 
 
 class Reddalert:
@@ -93,7 +94,8 @@ if __name__ == '__main__':
     ch.setFormatter(formatter)
     # Setup logger output
     root_logger.addHandler(ch)
-    # Supress logging
+
+    # Suppress logging
     if args.silent:
         root_logger.setLevel(logging.WARNING)
     else:
@@ -104,6 +106,7 @@ if __name__ == '__main__':
     if args.sentry:
         from raven import Client
         from raven.handlers.logging import SentryHandler
+
 
         client = Client(args.sentry)
         handler = SentryHandler(client)
