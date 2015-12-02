@@ -101,10 +101,6 @@ class PluginNonChefTestCase(unittest.TestCase):
             alerts = list(self.plugin.do_run())
             non_chef_alerts = [i for i in alerts if i['plugin_name'] == 'non_chef']
             chef_managed_alerts = [i for i in alerts if i['plugin_name'] == 'chef_managed']
-            print 'non_chef_alerts', non_chef_alerts
-            print 'chef_managed_alerts', chef_managed_alerts
-            b= [a["details"][0] for a in non_chef_alerts]
-            print 'a["details"][0]["publicIpAddress"] == "3.1.1.1" for a in non_chef_alerts', list(b)
 
             self.assertEqual(4, len(alerts))
 
@@ -144,7 +140,7 @@ class PluginNonChefTestCase(unittest.TestCase):
 
         def chef_list(*args, **kwargs):
             return [
-                {'name': 'host0', 'automatic': {'cloud': {'public_ipv4': '5.1.1.1'}}},
+                {'name': 'host0', 'automatic': {'cloud': {'public_ipv4': '4.1.1.1'}}},
                 {'name': 'host1', 'automatic': {'cloud': {'public_ipv4': '6.1.1.1'}}},
                 {'name': 'host2', 'automatic': {'cloud': {'public_ipv4': '7.1.1.1'}}},
             ]
@@ -153,9 +149,18 @@ class PluginNonChefTestCase(unittest.TestCase):
             self.plugin.init(eddaclient, self.config, {"first_seen": {'f': 8}}, instance_enricher)
 
             alerts = list(self.plugin.do_run())
+            non_chef_alerts = [i for i in alerts if i['plugin_name'] == 'non_chef']
+            chef_managed_alerts = [i for i in alerts if i['plugin_name'] == 'chef_managed']
+
+            self.assertEqual(2, len(alerts))
+
             # there is one problematic node (2.1.1.1)
-            self.assertEqual(1, len(alerts))
-            self.assertTrue(any(a["details"][0]["publicIpAddress"] == "2.1.1.1" for a in alerts))
+            self.assertEqual(1, len(non_chef_alerts))
+            self.assertTrue(any(a["details"][0]["publicIpAddress"] == "2.1.1.1" for a in non_chef_alerts))
+
+            # there is one chef managed node (4.1.1.1)
+            self.assertEqual(1, len(chef_managed_alerts))
+            self.assertTrue(any(a["details"][0]["publicIpAddress"] == "4.1.1.1" for a in chef_managed_alerts))
 
 
 def main():
