@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
 import unittest
-from mock import patch, Mock, call, MagicMock
+
+from mock import patch, Mock
 
 from api import InstanceEnricher
 from plugins import NonChefPlugin
 
 
 class PluginNonChefTestCase(unittest.TestCase):
-
     def setUp(self):
         self.plugin = NonChefPlugin()
         self.assertEqual(self.plugin.plugin_name, 'non_chef')
@@ -93,16 +93,29 @@ class PluginNonChefTestCase(unittest.TestCase):
                 {'name': 'host0', 'automatic': {'cloud': {'public_ipv4': '1.1.1.1'}}},
                 {'name': 'host1', 'automatic': {'cloud': {'public_ipv4': '2.1.1.1'}}},
                 {'name': 'host2', 'automatic': {'cloud': {'public_ipv4': '5.1.1.1'}}},
-                ]
+            ]
 
         with patch('plugins.chef.Search', side_effect=chef_list) as MockClass:
             self.plugin.init(eddaclient, self.config, {}, instance_enricher)
 
             alerts = list(self.plugin.do_run())
+            non_chef_alerts = [i for i in alerts if i['plugin_name'] == 'non_chef']
+            chef_managed_alerts = [i for i in alerts if i['plugin_name'] == 'chef_managed']
+            print 'non_chef_alerts', non_chef_alerts
+            print 'chef_managed_alerts', chef_managed_alerts
+            b= [a["details"][0] for a in non_chef_alerts]
+            print 'a["details"][0]["publicIpAddress"] == "3.1.1.1" for a in non_chef_alerts', list(b)
+
+            self.assertEqual(4, len(alerts))
+
             # there are two reportable instances, 3.1.1.1 and 4.1.1.1
-            self.assertEqual(2, len(alerts))
-            self.assertTrue(any(a["details"][0]["publicIpAddress"] == "3.1.1.1" for a in alerts))
-            self.assertTrue(any(a["details"][0]["publicIpAddress"] == "4.1.1.1" for a in alerts))
+            self.assertEqual(2, len(non_chef_alerts))
+            self.assertTrue(any(a["details"][0]["publicIpAddress"] == "3.1.1.1" for a in non_chef_alerts))
+            self.assertTrue(any(a["details"][0]["publicIpAddress"] == "4.1.1.1" for a in non_chef_alerts))
+
+            self.assertEqual(2, len(chef_managed_alerts))
+            self.assertTrue(any(a["details"][0]["publicIpAddress"] == "1.1.1.1" for a in chef_managed_alerts))
+            self.assertTrue(any(a["details"][0]["publicIpAddress"] == "2.1.1.1" for a in chef_managed_alerts))
 
     @patch('plugins.chef.ChefAPI')
     def test_nonempty_status(self, *mocks):
@@ -147,6 +160,7 @@ class PluginNonChefTestCase(unittest.TestCase):
 
 def main():
     unittest.main()
+
 
 if __name__ == '__main__':
     main()
