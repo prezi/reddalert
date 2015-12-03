@@ -127,8 +127,8 @@ class Route53Changed:
         locations_http = ["http://%s" % name for name in not_aws.keys()]
         locations_https = ["https://%s" % name for name in not_aws.keys()]
         locations = list(locations_http + locations_https)
-        self.logger.info("fetching %d urls on multiple threads" % len(locations))
-        hashed_items = Pool().map(page_hash, locations)
+        self.logger.info("fetching %d urls on 16 threads" % len(locations))
+        hashed_items = Pool(16).map(page_hash, locations)
         hashes = dict(hashed_items)
         old_hashes = self.status.get("hashes", {})
         alerts = {loc: h for loc, h in hashes.iteritems() if loc not in old_hashes or old_hashes[loc] != h}
