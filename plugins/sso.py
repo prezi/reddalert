@@ -50,9 +50,9 @@ class BaseClass:
         locations_https = ["https://%s" % name for name in all_my_domains]
         locations = list(locations_http + locations_https)
 
-        self.logger.info("fetching %d urls on 16 threads" % len(locations))
+        self.logger.info("fetching %d urls on multiple threads" % len(locations))
 
-        return {url: resp for url, resp in Pool(16).map(fetch_url, locations) if resp}
+        return {url: resp for url, resp in Pool().map(fetch_url, locations) if resp}
 
 
 class SSOUnprotected(BaseClass):
