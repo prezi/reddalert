@@ -116,7 +116,7 @@ if __name__ == '__main__':
     try:
         lock_handler = LockFile(args.statusfile)
         lock_handler.acquire(timeout=3)
-        root_logger.debug("Pid file not found, creating %s..." % lock_handler.path)
+        root_logger.debug("Lock file not found, creating %s.lock" % lock_handler.path)
     except LockTimeout as e:
         root_logger.critical('Locked, script running... exiting.')
         sys.exit()

@@ -2,7 +2,6 @@ import operator
 
 
 class InstanceEnricher:
-
     def __init__(self, edda_client):
         self.edda_client = edda_client.soft_clean()
         self.elbs = []
@@ -59,8 +58,13 @@ class InstanceEnricher:
 
 
 def instance_report(instance, extra={}):
+    # convert list of tags to a more readable dict
+    tags = {tag['key']: tag['value'] for tag in instance.get('tags', []) if 'key' in tag and 'value' in tag}
+
     result = {
         "instanceId": instance.get("instanceId", None),
+        'tags': tags,
+        'keyName': instance.get('keyName', None),
         "started": int(instance.get("launchTime", 0)),
         "service_type": instance.get("service_type", None),
         "elbs": instance.get("elbs", []),
