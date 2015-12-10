@@ -113,7 +113,7 @@ class NonChefPlugin:
         # handle non-ec2 chef hosts
         ec2_public_ips = [m['publicIpAddress'] for m in ec2_instances]
         for public_ip, chef_node in chef_hosts.iteritems():
-            if public_ip not in ec2_public_ips:
+            if public_ip not in ec2_public_ips and chef_node['automatic'].get('cloud', {}).get('provider') != 'ec2':
                 # found a chef managed non-EC2 host, create an event so we can run conformity checks on it
                 chef_details = {
                     'publicIpAddress': public_ip,

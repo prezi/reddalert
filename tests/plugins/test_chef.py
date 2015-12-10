@@ -90,9 +90,10 @@ class PluginNonChefTestCase(unittest.TestCase):
 
         def chef_list(*args, **kwargs):
             return [
-                {'name': 'host0', 'automatic': {'cloud': {'public_ipv4': '1.1.1.1'}}},
-                {'name': 'host1', 'automatic': {'cloud': {'public_ipv4': '2.1.1.1'}}},
-                {'name': 'host2', 'automatic': {'cloud': {'public_ipv4': '5.1.1.1'}}},
+                {'name': 'ec2 alive', 'automatic': {'cloud': {'public_ipv4': '1.1.1.1', 'provider': 'ec2'}}},
+                {'name': 'non-ec2 but cloud host alive', 'automatic': {'cloud': {'public_ipv4': '2.1.1.1'}}},
+                {'name': 'ec2 host dead', 'automatic': {'cloud': {'public_ipv4': '255.1.1.1', 'provider': 'ec2'}}},
+                {'name': 'non-ec2 host', 'automatic': {'ipaddress': '5.1.1.1'}},
             ]
 
         with patch('plugins.chef.Search', side_effect=chef_list) as MockClass:
@@ -102,16 +103,18 @@ class PluginNonChefTestCase(unittest.TestCase):
             non_chef_alerts = [i for i in alerts if i['plugin_name'] == 'non_chef']
             chef_managed_alerts = [i for i in alerts if i['plugin_name'] == 'chef_managed']
 
-            self.assertEqual(5, len(alerts))
-
-            # there are two reportable instances, 3.1.1.1 and 4.1.1.1
             self.assertEqual(2, len(non_chef_alerts))
-            self.assertTrue(any(a["details"][0]["publicIpAddress"] == "3.1.1.1" for a in non_chef_alerts))
-            self.assertTrue(any(a["details"][0]["publicIpAddress"] == "4.1.1.1" for a in non_chef_alerts))
-
             self.assertEqual(3, len(chef_managed_alerts))
-            self.assertTrue(any(a["details"][0]["publicIpAddress"] == "1.1.1.1" for a in chef_managed_alerts))
-            self.assertTrue(any(a["details"][0]["publicIpAddress"] == "2.1.1.1" for a in chef_managed_alerts))
+
+            non_chef_ips = [a["details"][0]["publicIpAddress"] for a in non_chef_alerts]
+            chef_managed_ips = [a["details"][0]["publicIpAddress"] for a in chef_managed_alerts]
+
+            self.assertIn("3.1.1.1", non_chef_ips)
+            self.assertIn("4.1.1.1", non_chef_ips)
+
+            self.assertIn("1.1.1.1", chef_managed_ips)
+            self.assertIn("2.1.1.1", chef_managed_ips)
+            self.assertIn("5.1.1.1", chef_managed_ips)
 
     @patch('plugins.chef.ChefAPI')
     def test_nonempty_status(self, *mocks):
