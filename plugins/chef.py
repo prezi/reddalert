@@ -53,7 +53,7 @@ class NonChefPlugin:
 
         for i in xrange(5):
             try:
-                search_result = Search('node', 'roles:*osx*', rows=100, api=self.api)
+                search_result = Search('node', rows=10000, api=self.api)
 
                 if search_result:
                     return {get_public_ip(node): node for node in search_result if
