@@ -30,7 +30,7 @@ nosetests.xml
 *.mo
 
 # Virtualenv
-virtualenv/
+virtualenv
 
 # Mr Developer
 .mr.developer.cfg
@@ -40,7 +40,8 @@ virtualenv/
 # OSX
 .DS_Store
 
-virtualenv
-
 configfile.json
 statusfile.json
+
+# lock files
+etc/*.*-*

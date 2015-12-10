@@ -5,3 +5,4 @@ pychef==0.2.3
 requests==2.6.0
 lockfile==0.10.2
 raven==5.4.4
+IPy==0.83

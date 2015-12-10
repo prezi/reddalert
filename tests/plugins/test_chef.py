@@ -102,14 +102,14 @@ class PluginNonChefTestCase(unittest.TestCase):
             non_chef_alerts = [i for i in alerts if i['plugin_name'] == 'non_chef']
             chef_managed_alerts = [i for i in alerts if i['plugin_name'] == 'chef_managed']
 
-            self.assertEqual(4, len(alerts))
+            self.assertEqual(5, len(alerts))
 
             # there are two reportable instances, 3.1.1.1 and 4.1.1.1
             self.assertEqual(2, len(non_chef_alerts))
             self.assertTrue(any(a["details"][0]["publicIpAddress"] == "3.1.1.1" for a in non_chef_alerts))
             self.assertTrue(any(a["details"][0]["publicIpAddress"] == "4.1.1.1" for a in non_chef_alerts))
 
-            self.assertEqual(2, len(chef_managed_alerts))
+            self.assertEqual(3, len(chef_managed_alerts))
             self.assertTrue(any(a["details"][0]["publicIpAddress"] == "1.1.1.1" for a in chef_managed_alerts))
             self.assertTrue(any(a["details"][0]["publicIpAddress"] == "2.1.1.1" for a in chef_managed_alerts))
 
@@ -141,8 +141,8 @@ class PluginNonChefTestCase(unittest.TestCase):
         def chef_list(*args, **kwargs):
             return [
                 {'name': 'host0', 'automatic': {'cloud': {'public_ipv4': '4.1.1.1'}}},
-                {'name': 'host1', 'automatic': {'cloud': {'public_ipv4': '6.1.1.1'}}},
-                {'name': 'host2', 'automatic': {'cloud': {'public_ipv4': '7.1.1.1'}}},
+                {'name': 'host1', 'automatic': {'cloud': {'public_ipv4': '5.1.1.1'}}},
+                {'name': 'host2', 'automatic': {'cloud': {'public_ipv4': '6.1.1.1'}}},
             ]
 
         with patch('plugins.chef.Search', side_effect=chef_list) as MockClass:
@@ -152,14 +152,14 @@ class PluginNonChefTestCase(unittest.TestCase):
             non_chef_alerts = [i for i in alerts if i['plugin_name'] == 'non_chef']
             chef_managed_alerts = [i for i in alerts if i['plugin_name'] == 'chef_managed']
 
-            self.assertEqual(2, len(alerts))
+            self.assertEqual(4, len(alerts))
 
             # there is one problematic node (2.1.1.1)
             self.assertEqual(1, len(non_chef_alerts))
             self.assertTrue(any(a["details"][0]["publicIpAddress"] == "2.1.1.1" for a in non_chef_alerts))
 
-            # there is one chef managed node (4.1.1.1)
-            self.assertEqual(1, len(chef_managed_alerts))
+            # there is three chef managed node (4.1.1.1, 5.1.1.1, 6.1.1.1)
+            self.assertEqual(3, len(chef_managed_alerts))
             self.assertTrue(any(a["details"][0]["publicIpAddress"] == "4.1.1.1" for a in chef_managed_alerts))
 
 

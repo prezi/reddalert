@@ -7,6 +7,7 @@ import re
 
 from chef import Search, ChefAPI
 from chef.exceptions import ChefServerError
+from IPy import IP
 
 
 class NonChefPlugin:
@@ -44,20 +45,30 @@ class NonChefPlugin:
         return list(self.do_run()) if self.api else []
 
     def get_chef_hosts(self):
+        def get_public_ip(chef_node):
+            if 'cloud' in chef_node.get('automatic', {}):
+                return chef_node.get('automatic', {}).get('cloud', {}).get('public_ipv4')
+            else:
+                return chef_node.get('automatic', {}).get('ipaddress')
+
         for i in xrange(5):
             try:
-                search_result = Search('node', 'ec2:*', rows=2000, api=self.api)
+                search_result = Search('node', 'roles:*osx*', rows=100, api=self.api)
+
                 if search_result:
-                    return {row['automatic']['cloud']['public_ipv4']: row['name']
-                            for row in search_result
-                            if 'cloud' in row.get('automatic', {}) and  # only store EC2 instances
-                            'public_ipv4' in row['automatic']['cloud']  # which have public IP address
-                            }
+                    return {get_public_ip(node): node for node in search_result if
+                            get_public_ip(node) and IP(get_public_ip(node)).iptype() != 'PRIVATE'}
             except ChefServerError:
                 time.sleep(5)
-        return None
 
     def do_run(self):
+        def _create_alert(plugin_name, alert_id, details):
+            return {
+                "plugin_name": plugin_name,
+                "id": alert_id,
+                "details": [details]
+            }
+
         # NOTE! an instance has 3 hours to register itself to chef!
         aws_to_chef_delay = 3 * 60 * 60 * 1000
         since = self.edda_client._since or 0
@@ -71,43 +82,47 @@ class NonChefPlugin:
             self.logger.warning('No chef hosts were found.')
             return
 
-        for machine in self.edda_client.soft_clean().query("/api/v2/view/instances;_expand"):
-            launch_time = int(machine.get("launchTime", 0))
-
-            # convert list of tags to a more readable dict
-            tags = {tag['key']: tag['value'] for tag in machine.get('tags', []) if 'key' in tag and 'value' in tag}
-            extra_details = {
-                'tags': tags,
-                'keyName': machine.get('keyName', None),
-                'securityGroups': machine.get('securityGroups', [])
-            }
+        # handle EC2 instances first
+        ec2_instances = self.edda_client.soft_clean().query("/api/v2/view/instances;_expand")
+        for machine in ec2_instances:
+            enriched_instance = self.instance_enricher.report(machine)
+            instance_id = enriched_instance['instanceId']
+            launch_time = enriched_instance['started']
+            tags = enriched_instance['tags']
+            public_ip_address = enriched_instance['publicIpAddress']
+            alert_id = "%s-%s" % (
+                enriched_instance.get('keyName', enriched_instance['instanceId']),
+                enriched_instance.get("service_type", "unknown_service"))
 
             if not self.is_excluded_instance(tags.get('service_name', None) or tags.get('Name', None)) and \
-                            machine['publicIpAddress'] != 'null' and machine['publicIpAddress'] is not None:
+                    public_ip_address and public_ip_address != 'null':
 
                 # found a not excluded machine
-                if machine['publicIpAddress'] not in chef_hosts and check_since <= launch_time <= check_until and \
-                                machine['instanceId'] not in self.status['first_seen']:
+                if public_ip_address not in chef_hosts \
+                        and check_since <= launch_time <= check_until and instance_id not in self.status['first_seen']:
 
                     # found a non-chef managed host which has not been seen before
-                    self.status['first_seen'][machine['instanceId']] = launch_time
-
-                    details = self.instance_enricher.report(machine, extra=extra_details)
-                    yield {
-                        "plugin_name": self.plugin_name,
-                        "id": "%s-%s" % (
-                            machine.get('keyName', machine['instanceId']),
-                            machine.get("service_type", "unknown_service")),
-                        "details": [details]
-                    }
-                elif machine['publicIpAddress'] in chef_hosts:
+                    self.status['first_seen'][instance_id] = launch_time
+                    yield _create_alert(self.plugin_name, alert_id, enriched_instance)
+                elif public_ip_address in chef_hosts:
 
                     # found a chef managed host, create an event so we can run conformity checks on it
-                    details = self.instance_enricher.report(machine, extra=extra_details)
-                    yield {
-                        "plugin_name": 'chef_managed',
-                        "id": "%s-%s" % (
-                            machine.get('keyName', machine['instanceId']),
-                            machine.get("service_type", "unknown_service")),
-                        "details": [details]
-                    }
+                    yield _create_alert('chef_managed', alert_id, enriched_instance)
+
+
+        # handle non-ec2 chef hosts
+        ec2_public_ips = [m['publicIpAddress'] for m in ec2_instances]
+        for public_ip, chef_node in chef_hosts.iteritems():
+            if public_ip not in ec2_public_ips:
+                # found a chef managed non-EC2 host, create an event so we can run conformity checks on it
+                chef_details = {
+                    'publicIpAddress': public_ip,
+                    'chef_node_name': chef_node.get('name'),
+                    'hostname': chef_node['automatic'].get('machinename'),
+                    'fqdn': chef_node['automatic'].get('fqdn'),
+                    'platform': chef_node['automatic'].get('platform'),
+                    'operating_system': chef_node['automatic'].get('os'),
+                    'operating_system_version': chef_node['automatic'].get('os_version'),
+                }
+
+                yield _create_alert('chef_managed', chef_details['chef_node_name'], chef_details)
