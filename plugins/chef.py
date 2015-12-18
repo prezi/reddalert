@@ -69,6 +69,16 @@ class NonChefPlugin:
                 "details": [details]
             }
 
+        def _enrich_with_chef(chef_node):
+            return {
+                'chef_node_name': chef_node.get('name'),
+                'hostname': chef_node['automatic'].get('machinename'),
+                'fqdn': chef_node['automatic'].get('fqdn'),
+                'platform': chef_node['automatic'].get('platform'),
+                'operating_system': chef_node['automatic'].get('os'),
+                'operating_system_version': chef_node['automatic'].get('os_version'),
+            }
+
         # NOTE! an instance has 3 hours to register itself to chef!
         aws_to_chef_delay = 3 * 60 * 60 * 1000
         since = self.edda_client._since or 0
@@ -108,8 +118,8 @@ class NonChefPlugin:
                 elif public_ip_address in chef_hosts:
 
                     # found a chef managed host, create an event so we can run conformity checks on it
-                    chef_node_name = chef_hosts[public_ip_address].get('name')
-                    enriched_instance['chef_node_name'] = chef_node_name
+                    chef_node = chef_hosts[public_ip_address]
+                    enriched_instance.update(_enrich_with_chef(chef_node))
                     yield _create_alert('chef_managed', alert_id, enriched_instance)
 
 
@@ -118,14 +128,7 @@ class NonChefPlugin:
         for public_ip, chef_node in chef_hosts.iteritems():
             if public_ip not in ec2_public_ips and chef_node['automatic'].get('cloud', {}).get('provider') != 'ec2':
                 # found a chef managed non-EC2 host, create an event so we can run conformity checks on it
-                chef_details = {
-                    'publicIpAddress': public_ip,
-                    'chef_node_name': chef_node.get('name'),
-                    'hostname': chef_node['automatic'].get('machinename'),
-                    'fqdn': chef_node['automatic'].get('fqdn'),
-                    'platform': chef_node['automatic'].get('platform'),
-                    'operating_system': chef_node['automatic'].get('os'),
-                    'operating_system_version': chef_node['automatic'].get('os_version'),
-                }
+                chef_details = _enrich_with_chef(chef_node)
+                chef_details['publicIpAddress'] = public_ip
 
                 yield _create_alert('chef_managed', chef_details['chef_node_name'], chef_details)
