@@ -86,6 +86,7 @@ class NonChefPlugin:
         ec2_instances = self.edda_client.soft_clean().query("/api/v2/view/instances;_expand")
         for machine in ec2_instances:
             enriched_instance = self.instance_enricher.report(machine)
+
             instance_id = enriched_instance['instanceId']
             launch_time = enriched_instance['started']
             tags = enriched_instance['tags']
@@ -107,6 +108,8 @@ class NonChefPlugin:
                 elif public_ip_address in chef_hosts:
 
                     # found a chef managed host, create an event so we can run conformity checks on it
+                    chef_node_name = chef_hosts[public_ip_address].get('name')
+                    enriched_instance['chef_node_name'] = chef_node_name
                     yield _create_alert('chef_managed', alert_id, enriched_instance)
 
 
