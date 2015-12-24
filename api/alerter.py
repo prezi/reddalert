@@ -3,16 +3,14 @@ import logging
 import smtplib
 import StringIO
 import sys
-import time
 import datetime
-
-from elasticsearch import Elasticsearch
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+from elasticsearch import Elasticsearch, helpers
+
 
 class StdOutAlertSender:
-
     def __init__(self, tabsep, console=sys.stdout):
         self.tab_separated_output = tabsep
         self.console = console
@@ -34,7 +32,6 @@ class StdOutAlertSender:
 
 
 class EmailAlertSender:
-
     def __init__(self, msg_type="plain"):
         self.msg_type = msg_type
 
@@ -59,7 +56,7 @@ class EmailAlertSender:
         msg['From'] = email_from
         msg['To'] = recipients
 
-        msg.attach(MIMEText(txt.encode("utf-8"), "plain"))
+        msg.attach(MIMEText(txt.encode("utf-8"), msg_type))
 
         print "msg: %s" % repr(msg.as_string())
 
@@ -69,23 +66,30 @@ class EmailAlertSender:
 
 
 class ESAlertSender:
-
     def __init__(self):
-        self.es = None
         self.logger = logging.getLogger("ESAlertSender")
 
     def send_alerts(self, configuration, alerts):
-        self.es = Elasticsearch([{"host": configuration["es_host"], "port": configuration["es_port"]}])
-        for alert in self.flatten_alerts(alerts):
-            self.insert_es(alert)
-
-    def insert_es(self, alert):
-        try:
+        def create_es_action(alert):
             alert["@timestamp"] = datetime.datetime.utcnow().isoformat()
             alert["type"] = "reddalert"
-            self.es.create(body=alert, id=hashlib.sha1(str(alert)).hexdigest(), index='reddalert', doc_type='reddalert')
+            return {
+                '_op_type': 'create',
+                '_index': 'reddalert',
+                '_type': alert["type"],
+                '_id': hashlib.sha1(str(alert)).hexdigest(),
+                '_source': alert
+            }
+
+        es_actions = [create_es_action(alert) for alert in self.flatten_alerts(alerts)]
+        try:
+            es = Elasticsearch(
+                [{"host": configuration["es_host"], "port": configuration["es_port"]}])
+            _, errors = helpers.bulk(client=es, actions=es_actions)
+            if errors:
+                self.logger.error('Got errors during bulk ElasticSearch insert: %s', errors)
         except Exception as e:
-            self.logger.error(e)
+            self.logger.exception(e)
 
     def flatten_alerts(self, alerts):
         for alert in alerts:
@@ -99,7 +103,6 @@ class ESAlertSender:
 
 
 class Alerter:
-
     AVAILABLE_ALERTERS = {
         "stdout": StdOutAlertSender(tabsep=False),
         "stdout_tabsep": StdOutAlertSender(tabsep=True),
