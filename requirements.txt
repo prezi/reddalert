@@ -1,8 +1,8 @@
 argparse==1.2.1
 boto==2.23.0
-elasticsearch
-pychef==0.2.3
+elasticsearch==2.1.0
 requests==2.6.0
 lockfile==0.10.2
 raven==5.4.4
-IPy==0.83
+ipy==0.83
+pychef==0.2.3
