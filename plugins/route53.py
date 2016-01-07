@@ -7,6 +7,7 @@ import re
 import urllib2
 from chef import Search, ChefAPI
 from multiprocessing import Pool
+from IPy import IP
 
 def is_ip_unknown(ip, ip_set):
     return ip not in ip_set
@@ -24,6 +25,13 @@ def is_cname_unknown(record, ip_set, legit_domains):
 def is_external(entry, ip_set, legit_domains):
     aliases = [r.get("value") for r in entry.get("resourceRecords")]
     return any(is_ip_unknown(r, ip_set) and is_cname_unknown(r, ip_set, legit_domains) for r in aliases)
+
+def is_ip_private(ip_addr):
+    try:
+        ip = IP(ip_addr)
+        return ip.iptype() != 'PRIVATE'
+    except:
+        return False
 
 def load_route53_entries(edda_client, zone=None):
     zone_selector = ";zone.name=%s" % zone if zone else ""
@@ -78,6 +86,8 @@ class Route53Unknown:
         for e in external_entries:
             records = [r.get("value") for r in e.get("resourceRecords")]
             for r in records:
+                if is_ip_private(r):
+                    continue
                 if is_ip_unknown(r, registered_ips) and is_cname_unknown(r, registered_ips, legit_domains):
                     alerts.append((e.get("name", "<unknown>"), r))
         alerts_filtered = [a for a in alerts if ("%s-%s" % a) not in self.status['known']]
