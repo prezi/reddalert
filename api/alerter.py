@@ -81,7 +81,7 @@ class ESAlertSender:
 
     def insert_es(self, alert):
         try:
-            alert["@timestamp"] = datetime.datetime.utcnow().isoformat()
+            alert["@timestamp"] = datetime.datetime.utcnow().isoformat() + "Z"
             alert["type"] = "reddalert"
             self.es.create(body=alert, id=hashlib.sha1(str(alert)).hexdigest(), index='reddalert', doc_type='reddalert')
         except Exception as e:
