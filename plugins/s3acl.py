@@ -8,12 +8,13 @@ import boto
 from boto.s3.key import Key
 from boto.s3.connection import S3Connection
 from boto.exception import S3ResponseError
+
+
 boto.config.add_section('Boto')
 boto.config.set('Boto', 'http_socket_timeout', '10')
 
 
 class S3AclPlugin:
-
     def __init__(self):
         self.plugin_name = 's3acl'
         self.logger = logging.getLogger('s3acl')
@@ -55,7 +56,8 @@ class S3AclPlugin:
         return [bs for bs in buckets if not any(regex.match(bs.name) for regex in self.excluded_buckets)]
 
     def filter_excluded_keys(self, keys):
-        return [key for key in keys if not any(regex.match('%s:%s' % (key.bucket.name, key.name)) for regex in self.excluded_keys)]
+        return [key for key in keys if
+                not any(regex.match('%s:%s' % (key.bucket.name, key.name)) for regex in self.excluded_keys)]
 
     def traverse_bucket(self, b, prefix):
         self.logger.debug("traverse_bucket('%s', '%s')" % (b.name, prefix))
@@ -89,7 +91,7 @@ class S3AclPlugin:
 
             return ["%s %s" % (g.id or 'Everyone', g.permission) for g in grants if self.is_suspicious(g, allowed)]
         except S3ResponseError as e:
-            self.logger.error("ACL fetching error: %s %s", key, e.message)
+            self.logger.error("ACL fetching error: %s %s", key.name, e.message)
             return []
 
     def is_suspicious(self, grant, allowed):
