@@ -68,6 +68,10 @@ class Reddalert:
 
 
 if __name__ == '__main__':
+    import argparse
+    import logging
+    from api import EddaClient, Coordinator, Alerter
+    from plugins import plugin_list
 
     parser = argparse.ArgumentParser(description='Runs tests against AWS configuration')
     parser.add_argument('--configfile', '-c', default='etc/configfile.json', help='Configuration file')
@@ -95,7 +99,7 @@ if __name__ == '__main__':
     # Setup logger output
     root_logger.addHandler(ch)
 
-    # Suppress logging
+    # Supress logging
     if args.silent:
         root_logger.setLevel(logging.WARNING)
     else:
