@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import unittest
+from mock import patch, Mock, call, MagicMock
 
 from mock import patch, Mock
 
@@ -9,6 +10,7 @@ from plugins import NonChefPlugin
 
 
 class PluginNonChefTestCase(unittest.TestCase):
+
     def setUp(self):
         self.plugin = NonChefPlugin()
         self.assertEqual(self.plugin.plugin_name, 'non_chef')
