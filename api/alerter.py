@@ -3,7 +3,9 @@ import logging
 import smtplib
 import StringIO
 import sys
+import time
 import datetime
+
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -32,6 +34,7 @@ class StdOutAlertSender:
 
 
 class EmailAlertSender:
+
     def __init__(self, msg_type="plain"):
         self.msg_type = msg_type
 
@@ -56,7 +59,7 @@ class EmailAlertSender:
         msg['From'] = email_from
         msg['To'] = recipients
 
-        msg.attach(MIMEText(txt.encode("utf-8"), msg_type))
+        msg.attach(MIMEText(txt.encode("utf-8"), "plain"))
 
         print "msg: %s" % repr(msg.as_string())
 
@@ -66,28 +69,20 @@ class EmailAlertSender:
 
 
 class ESAlertSender:
+
     def __init__(self):
         self.logger = logging.getLogger("ESAlertSender")
 
     def send_alerts(self, configuration, alerts):
-        def create_es_action(alert):
+        self.es = Elasticsearch([{"host": configuration["es_host"], "port": configuration["es_port"]}])
+        for alert in self.flatten_alerts(alerts):
+            self.insert_es(alert)
+
+    def insert_es(self, alert):
+        try:
             alert["@timestamp"] = datetime.datetime.utcnow().isoformat()
             alert["type"] = "reddalert"
-            return {
-                '_op_type': 'create',
-                '_index': 'reddalert',
-                '_type': alert["type"],
-                '_id': hashlib.sha1(str(alert)).hexdigest(),
-                '_source': alert
-            }
-
-        es_actions = [create_es_action(alert) for alert in self.flatten_alerts(alerts)]
-        try:
-            es = Elasticsearch(
-                [{"host": configuration["es_host"], "port": configuration["es_port"]}])
-            _, errors = helpers.bulk(client=es, actions=es_actions)
-            if errors:
-                self.logger.error('Got errors during bulk ElasticSearch insert: %s', errors)
+            self.es.create(body=alert, id=hashlib.sha1(str(alert)).hexdigest(), index='reddalert', doc_type='reddalert')
         except Exception as e:
             self.logger.exception(e)
 
@@ -103,6 +98,7 @@ class ESAlertSender:
 
 
 class Alerter:
+
     AVAILABLE_ALERTERS = {
         "stdout": StdOutAlertSender(tabsep=False),
         "stdout_tabsep": StdOutAlertSender(tabsep=True),
