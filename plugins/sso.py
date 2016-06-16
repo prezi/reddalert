@@ -20,7 +20,6 @@ def one_starts_with_another(one, two):
     return one.startswith(two) or two.startswith(one)
 
 class BaseClass:
-    PROCESSING_POOL_SIZE = 8
     def __init__(self):
         pass
 
@@ -51,13 +50,9 @@ class BaseClass:
         locations_https = ["https://%s" % name for name in all_my_domains]
         locations = list(locations_http + locations_https)
 
-        self.logger.info("fetching %d urls on %d threads" % (len(locations), self.PROCESSING_POOL_SIZE))
-        
-        processing_pool = Pool(self.PROCESSING_POOL_SIZE)
-        result = {url: resp for url, resp in processing_pool.map(fetch_url, locations) if resp}
-        processing_pool.close()
+        self.logger.info("fetching %d urls on 16 threads" % len(locations))
 
-        return result
+        return {url: resp for url, resp in Pool(16).map(fetch_url, locations) if resp}
 
 
 class SSOUnprotected(BaseClass):
