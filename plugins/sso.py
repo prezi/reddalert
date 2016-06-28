@@ -93,14 +93,17 @@ class SSOUnprotected(BaseClass):
         }
         self.status["redirects"] = redirects
         for tested_url, location_header in alerts.iteritems():
-            sso_redirect_url = self.SSO_URL + tested_url
-            godauth_redirect_url = self.GODAUTH_URL + tested_url
-            if one_starts_with_another(sso_redirect_url, location_header) or \
-                    one_starts_with_another(godauth_redirect_url, location_header):
-                continue
-
             loc_re = re.search(r'https?://(.*)', tested_url)
             red_re = re.search(r'https?://(.*)', location_header)
+
+            sso_redirect_url = self.SSO_URL + tested_url
+            sso_redirect_url_https = re.sub(r"^http://", "https://", sso_redirect_url)
+            godauth_redirect_url = self.GODAUTH_URL + tested_url
+
+            if one_starts_with_another(sso_redirect_url, location_header) or \
+                    one_starts_with_another(godauth_redirect_url, location_header) or \
+                    one_starts_with_another(sso_redirect_url_https, location_header):
+                continue
 
             if red_re and red_re.group(1).startswith('tbd-'):
                 continue
