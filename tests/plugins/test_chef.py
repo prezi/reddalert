@@ -165,6 +165,51 @@ class PluginNonChefTestCase(unittest.TestCase):
             self.assertEqual(3, len(chef_managed_alerts))
             self.assertTrue(any(a["details"][0]["publicIpAddress"] == "4.1.1.1" for a in chef_managed_alerts))
 
+    @patch('plugins.chef.ChefAPI')
+    def test_ignore_elasticbeanstlak(self, *mocks):
+        instance_enricher = InstanceEnricher(Mock())
+        eddaclient = Mock()
+
+        def ret_list(args):
+            return [
+                {'keyName': 'keyName1', 'instanceId': 'a', 'privateIpAddress': '10.1.1.1', 'publicIpAddress': '2.1.1.1',
+                 "tags": [{"key": "service_name", "value": "foo"}], 'launchTime': 7 * 3600000 + 1},
+                {'keyName': 'keyName2', 'instanceId': 'b', 'privateIpAddress': '10.1.1.2', 'publicIpAddress': '3.1.1.1',
+                 "tags": [{"key": "elasticbeanstalk:environment-name", "value": "foo"},
+                          {"key": "service_name", "value": "bar"}], 'launchTime': 7 * 3600000 + 1}
+            ]
+
+        m = Mock()
+        m.query = Mock(side_effect=ret_list)
+        eddaclient.soft_clean = Mock(return_value=m)
+        eddaclient._since = 10 * 3600000
+        eddaclient._until = 11 * 3600000
+
+        def chef_list(*args, **kwargs):
+            return [
+                {'name': 'host0', 'automatic': {'cloud': {'public_ipv4': '4.1.1.1'}}},
+                {'name': 'host1', 'automatic': {'cloud': {'public_ipv4': '5.1.1.1'}}},
+                {'name': 'host2', 'automatic': {'cloud': {'public_ipv4': '6.1.1.1'}}},
+            ]
+
+        with patch('plugins.chef.Search', side_effect=chef_list) as MockClass:
+            self.plugin.init(eddaclient, self.config, {"first_seen": {'f': 8}}, instance_enricher)
+
+            alerts = list(self.plugin.do_run())
+            non_chef_alerts = [i for i in alerts if i['plugin_name'] == 'non_chef']
+            chef_managed_alerts = [i for i in alerts if i['plugin_name'] == 'chef_managed']
+
+            print alerts
+            self.assertEqual(4, len(alerts))
+
+            # there is one problematic node (2.1.1.1)
+            self.assertEqual(1, len(non_chef_alerts))
+            self.assertTrue(any(a["details"][0]["publicIpAddress"] == "2.1.1.1" for a in non_chef_alerts))
+
+            # there is three chef managed node (4.1.1.1, 5.1.1.1, 6.1.1.1)
+            self.assertEqual(3, len(chef_managed_alerts))
+            self.assertTrue(any(a["details"][0]["publicIpAddress"] == "4.1.1.1" for a in chef_managed_alerts))
+
 
 def main():
     unittest.main()

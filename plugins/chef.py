@@ -11,9 +11,9 @@ from IPy import IP
 
 
 class NonChefPlugin:
-    '''
+    """
     Returns those EC2 instances which do not have a corresponding Chef entry based on the public IPv4 address.
-    '''
+    """
 
     def __init__(self):
         self.plugin_name = 'non_chef'
@@ -35,7 +35,11 @@ class NonChefPlugin:
             status['first_seen'] = {}
         self.status = status
 
-    def is_excluded_instance(self, service_name):
+    def is_excluded_instance(self, tags):
+        if 'elasticbeanstalk:environment-name' in tags:
+            return True  # Amazon ElasticBeanstalk hosts are not Chef managed
+
+        service_name = tags.get('service_name', None) or tags.get('Name', None)
         for excluded_instance in self.excluded_instances:
             if service_name is not None and re.match(excluded_instance, service_name):
                 return True
@@ -108,7 +112,7 @@ class NonChefPlugin:
                 enriched_instance.get('keyName', enriched_instance['instanceId']),
                 enriched_instance.get("service_type", "unknown_service"))
 
-            if not self.is_excluded_instance(tags.get('service_name', None) or tags.get('Name', None)) and \
+            if not self.is_excluded_instance(tags) and \
                     public_ip_address and public_ip_address != 'null':
 
                 # found a not excluded machine
@@ -143,7 +147,7 @@ class NonChefPlugin:
                 'securityGroups': machine.get('securityGroups', [])
             }
 
-            if not self.is_excluded_instance(tags.get('service_name', None) or tags.get('Name', None)) and \
+            if not self.is_excluded_instance(tags) and \
                             machine['publicIpAddress'] != 'null' and machine['publicIpAddress'] is not None:
 
                 # found a not excluded machine
