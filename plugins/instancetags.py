@@ -2,8 +2,11 @@
 import itertools
 from api import instance_report
 
-class NewInstanceTagPlugin:
 
+IGNORE_TAGS = ['testapp']
+
+
+class NewInstanceTagPlugin:
     def __init__(self):
         self.plugin_name = 'newtag'
 
@@ -26,7 +29,7 @@ class NewInstanceTagPlugin:
 
         for tag_name, instances in grouped_by_tag:
             instances = list(instances)
-            if all([i["started"] >= since for i in instances]):
+            if all([i["started"] >= since for i in instances]) and tag_name not in IGNORE_TAGS:
                 yield {
                     "plugin_name": self.plugin_name,
                     "id": tag_name,
@@ -35,7 +38,6 @@ class NewInstanceTagPlugin:
 
 
 class MissingInstanceTagPlugin:
-
     def __init__(self):
         self.plugin_name = 'missingtag'
 
