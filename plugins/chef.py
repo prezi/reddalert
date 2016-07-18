@@ -39,6 +39,9 @@ class NonChefPlugin:
         if 'elasticbeanstalk:environment-name' in tags:
             return True  # Amazon ElasticBeanstalk hosts are not Chef managed
 
+        if 'cloudbees:pse:type' in tags:
+            return True # New CI nodes
+
         service_name = tags.get('service_name', None) or tags.get('Name', None)
         for excluded_instance in self.excluded_instances:
             if service_name is not None and re.match(excluded_instance, service_name):
