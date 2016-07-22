@@ -36,8 +36,8 @@ class NonChefPlugin:
         self.status = status
 
     def is_excluded_instance(self, tags):
-        if 'elasticbeanstalk:environment-name' in tags:
-            return True  # Amazon ElasticBeanstalk hosts are not Chef managed
+        if 'elasticbeanstalk:environment-name' in tags or 'aws:cloudformation:stack-name' in tags:
+            return True  # Amazon ElasticBeanstalk and CloudFormation hosts are not Chef managed
 
         if 'cloudbees:pse:type' in tags:
             return True # New CI nodes
