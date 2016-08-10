@@ -26,9 +26,6 @@ class SecurityGroupPlugin:
         groups = self.edda_client.updateonly().query("/api/v2/aws/securityGroups;_expand")
         machines = self.edda_client.query("/api/v2/view/instances;_expand")
         for group in groups:
-            if group.get('vpcId', None):
-                # ignore VPC security groups here, since we'll have a seperate plugin for those
-                continue
             perms = list(self.suspicious_perms(group["ipPermissions"])) if "ipPermissions" in group else []
             if perms:
                 affected_machines = self.machines_with_group(machines, group["groupId"])
