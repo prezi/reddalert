@@ -40,7 +40,10 @@ class NonChefPlugin:
             return True  # Amazon ElasticBeanstalk and CloudFormation hosts are not Chef managed
 
         if 'cloudbees:pse:type' in tags:
-            return True # New CI nodes
+            return True  # New CI nodes
+
+        if 'aws:elasticmapreduce:instance-group-role' in tags:
+            return True  # EMR nodes
 
         service_name = tags.get('service_name', None) or tags.get('Name', None)
         for excluded_instance in self.excluded_instances:
