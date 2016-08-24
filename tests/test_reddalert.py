@@ -38,8 +38,8 @@ class ReddalertTestCase(unittest.TestCase):
 
         self.assertEqual(self.reddalert.load_json(self.test_invalid_json, logger), {})
         self.assertEqual(logger.mock_calls, [
-            call.error("Failed to read file '%s'", 'asd'),
-            call.error("Invalid JSON file '%s'", self.test_invalid_json)
+            call.exception("Failed to read file '%s'", 'asd'),
+            call.exception("Invalid JSON file '%s'", self.test_invalid_json)
         ])
 
     def test_save_json(self):
@@ -51,7 +51,7 @@ class ReddalertTestCase(unittest.TestCase):
 
         self.assertEqual(logger.mock_calls, [
             call.warning('Got empty JSON content, not updating status file!'),
-            call.error("Failed to write file '%s'", '/tmp' * 100)
+            call.exception("Failed to write file '%s'", '/tmp' * 100)
         ])
 
     def test_get_config(self):

@@ -72,7 +72,7 @@ class S3AclPlugin:
                 selected_keys.extend(self.traverse_bucket(b, sp))
             return selected_keys
         except S3ResponseError as e:
-            self.logger.error("S3 error: %s:%s %s", b.name, prefix, e.message)
+            self.logger.exception("S3 error: %s:%s %s", b.name, prefix, e.message)
             return []
 
     def sample_population(self, population, offset=0):
@@ -91,7 +91,7 @@ class S3AclPlugin:
 
             return ["%s %s" % (g.id or 'Everyone', g.permission) for g in grants if self.is_suspicious(g, allowed)]
         except S3ResponseError as e:
-            self.logger.error("ACL fetching error: %s %s", key.name, e.message)
+            self.logger.exception("ACL fetching error: %s %s", key.name, e.message)
             return []
 
     def is_suspicious(self, grant, allowed):
