@@ -38,9 +38,9 @@ class Reddalert:
                 with open(json_file, 'r') as config_data:
                     return json.load(config_data)
             except IOError:
-                logger.error("Failed to read file '%s'", json_file)
+                logger.exception("Failed to read file '%s'", json_file)
             except ValueError:
-                logger.error("Invalid JSON file '%s'", json_file)
+                logger.exception("Invalid JSON file '%s'", json_file)
         return {}
 
     @staticmethod
@@ -55,7 +55,7 @@ class Reddalert:
                     json.dump(content, out_data, indent=4)
                     return True
             except IOError:
-                logger.error("Failed to write file '%s'", json_file)
+                logger.exception("Failed to write file '%s'", json_file)
         return False
 
     @staticmethod
