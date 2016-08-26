@@ -5,9 +5,9 @@ import random
 import re
 
 import boto
-from boto.s3.key import Key
-from boto.s3.connection import S3Connection
 from boto.exception import S3ResponseError
+from boto.s3.connection import S3Connection
+from boto.s3.key import Key
 
 
 boto.config.add_section('Boto')
@@ -91,7 +91,8 @@ class S3AclPlugin:
 
             return ["%s %s" % (g.id or 'Everyone', g.permission) for g in grants if self.is_suspicious(g, allowed)]
         except S3ResponseError as e:
-            self.logger.exception("ACL fetching error: %s %s", key.name, e.message)
+            if e.error_code != 'NoSuchKey':
+                self.logger.exception("ACL fetching error: %s %s %s", key.name, e.message, e.error_code)
             return []
 
     def is_suspicious(self, grant, allowed):
