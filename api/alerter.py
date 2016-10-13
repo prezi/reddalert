@@ -1,15 +1,13 @@
+import StringIO
+import datetime
 import hashlib
 import logging
 import smtplib
-import StringIO
 import sys
-import time
-import datetime
-
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from elasticsearch import Elasticsearch, helpers
+from elasticsearch import Elasticsearch
 
 
 class StdOutAlertSender:
@@ -34,7 +32,6 @@ class StdOutAlertSender:
 
 
 class EmailAlertSender:
-
     def __init__(self, msg_type="plain"):
         self.msg_type = msg_type
 
@@ -69,7 +66,6 @@ class EmailAlertSender:
 
 
 class ESAlertSender:
-
     def __init__(self):
         self.logger = logging.getLogger("ESAlertSender")
 
@@ -98,7 +94,6 @@ class ESAlertSender:
 
 
 class Alerter:
-
     AVAILABLE_ALERTERS = {
         "stdout": StdOutAlertSender(tabsep=False),
         "stdout_tabsep": StdOutAlertSender(tabsep=True),

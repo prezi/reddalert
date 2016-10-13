@@ -1,14 +1,15 @@
 #!/usr/bin/env python
-import unittest
 import os
-from mock import patch, Mock, call
+import unittest
+
+from mock import Mock, call
 from reddalert import Reddalert
+
 
 APPDIR = "%s/" % os.path.dirname(os.path.realpath(__file__))
 
 
 class ReddalertTestCase(unittest.TestCase):
-
     def setUp(self):
         self.reddalert = Reddalert
         self.test_status_file = APPDIR + 'test_data/test_status_file.json'
@@ -66,6 +67,7 @@ class ReddalertTestCase(unittest.TestCase):
 
 def main():
     unittest.main()
+
 
 if __name__ == '__main__':
     main()
