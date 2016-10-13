@@ -67,6 +67,7 @@ class EmailAlertSender:
 
 class ESAlertSender:
     def __init__(self):
+        self.es = None
         self.logger = logging.getLogger("ESAlertSender")
 
     def send_alerts(self, configuration, alerts):
@@ -76,7 +77,7 @@ class ESAlertSender:
 
     def insert_es(self, alert):
         try:
-            alert["@timestamp"] = datetime.datetime.utcnow().isoformat()
+            alert["@timestamp"] = datetime.datetime.utcnow().isoformat() + "Z"
             alert["type"] = "reddalert"
             self.es.create(body=alert, id=hashlib.sha1(str(alert)).hexdigest(), index='reddalert', doc_type='reddalert')
         except Exception as e:
