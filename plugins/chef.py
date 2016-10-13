@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
 from __future__ import absolute_import
-import logging
-import time
-import re
 
+import logging
+import re
+import time
+
+from IPy import IP
 from chef import Search, ChefAPI
 from chef.exceptions import ChefServerError
-from IPy import IP
 
 
 class NonChefPlugin:
@@ -102,9 +103,6 @@ class NonChefPlugin:
             self.logger.warning('No chef hosts were found.')
             return
 
-        for machine in self.edda_client.soft_clean().query("/api/v2/view/instances;_expand"):
-            launch_time = int(machine.get("launchTime", 0))
-
         # handle EC2 instances first
         ec2_instances = self.edda_client.soft_clean().query("/api/v2/view/instances;_expand")
         for machine in ec2_instances:
@@ -129,12 +127,10 @@ class NonChefPlugin:
                     self.status['first_seen'][instance_id] = launch_time
                     yield _create_alert(self.plugin_name, alert_id, enriched_instance)
                 elif public_ip_address in chef_hosts:
-
-                    # found a chef managed host, create an event so we can run conformity checks on it
+                    # found a chef managed EC2 host, create an event so we can run conformity checks on it
                     chef_node = chef_hosts[public_ip_address]
                     enriched_instance.update(_enrich_with_chef(chef_node))
                     yield _create_alert('chef_managed', alert_id, enriched_instance)
-
 
         # handle non-ec2 chef hosts
         ec2_public_ips = [m['publicIpAddress'] for m in ec2_instances]
@@ -145,40 +141,3 @@ class NonChefPlugin:
                 chef_details['publicIpAddress'] = public_ip
 
                 yield _create_alert('chef_managed', chef_details['chef_node_name'], chef_details)
-            # convert list of tags to a more readable dict
-            tags = {tag['key']: tag['value'] for tag in machine.get('tags', []) if 'key' in tag and 'value' in tag}
-            extra_details = {
-                'tags': tags,
-                'keyName': machine.get('keyName', None),
-                'securityGroups': machine.get('securityGroups', [])
-            }
-
-            if not self.is_excluded_instance(tags) and \
-                            machine['publicIpAddress'] != 'null' and machine['publicIpAddress'] is not None:
-
-                # found a not excluded machine
-                if machine['publicIpAddress'] not in chef_hosts and check_since <= launch_time <= check_until and \
-                                machine['instanceId'] not in self.status['first_seen']:
-
-                    # found a non-chef managed host which has not been seen before
-                    self.status['first_seen'][machine['instanceId']] = launch_time
-
-                    details = self.instance_enricher.report(machine, extra=extra_details)
-                    yield {
-                        "plugin_name": self.plugin_name,
-                        "id": "%s-%s" % (
-                            machine.get('keyName', machine['instanceId']),
-                            machine.get("service_type", "unknown_service")),
-                        "details": [details]
-                    }
-                elif machine['publicIpAddress'] in chef_hosts:
-
-                    # found a chef managed host, create an event so we can run conformity checks on it
-                    details = self.instance_enricher.report(machine, extra=extra_details)
-                    yield {
-                        "plugin_name": 'chef_managed',
-                        "id": "%s-%s" % (
-                            machine.get('keyName', machine['instanceId']),
-                            machine.get("service_type", "unknown_service")),
-                        "details": [details]
-                    }
