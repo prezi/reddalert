@@ -56,7 +56,9 @@ class PluginSsoTestCase(unittest.TestCase):
         eddaclient.clean = Mock(return_value=m)
         eddaclient.soft_clean = Mock(return_value=m1)
 
-        self.plugin.init(eddaclient, {'godauth_url': 'https://god.com/?red=', 'sso_url': 'https://sso.com/?red='}, {})
+        self.plugin.init(eddaclient, {
+            'godauth_url': '^https://prezi\\.com/api/v2/auth/godauth/\\?ref=https?://([^/]+)/?',
+            'sso_url': '^https://sso\\.prezi\\.com/auth/\\?redirect_uri=https://([^/]+)/?'}, {})
 
         HTTPretty.register_uri(HTTPretty.GET, 'http://vuln.prezi.com',
                                body='[{"title": "Test Deal"}]',
@@ -67,7 +69,7 @@ class PluginSsoTestCase(unittest.TestCase):
         HTTPretty.register_uri(HTTPretty.GET, 'https://godauth.prezi.com',
                                body='[{"title": "Test Deal"}]',
                                adding_headers={
-                                   'Location': "https://god.com/?red=https://godauth.prezi.com"
+                                   'Location': "https://prezi.com/api/v2/auth/godauth/?ref=https://godauth.prezi.com"
                                },
                                status=302)
         HTTPretty.register_uri(HTTPretty.GET, 'http://full-https.prezi.com',
@@ -97,38 +99,43 @@ class PluginSsoTestCase(unittest.TestCase):
         HTTPretty.register_uri(HTTPretty.GET, 'https://prezi-sso.prezi.com',
                                body='[{"title": "Test Deal"}]',
                                adding_headers={
-                                   'Location': "https://sso.com/?red=https://prezi-sso.prezi.com"
+                                   'Location': "https://sso.prezi.com/auth/?redirect_uri=https://prezi-sso.prezi.com"
                                },
                                status=302)
         HTTPretty.register_uri(HTTPretty.GET, 'https://prezi-sso2.prezi.com',
                                body='[{"title": "Test Deal"}]',
                                adding_headers={
-                                   'Location': "https://sso.com/?red=https://prezi-sso2.prezi.com/"
+                                   'Location': "https://sso.prezi.com/auth/?redirect_uri=https://prezi-sso2.prezi.com/"
                                },
                                status=302)
         HTTPretty.register_uri(HTTPretty.GET, 'https://prezi-sso3.prezi.com/',
                                body='[{"title": "Test Deal"}]',
                                adding_headers={
-                                   'Location': "https://sso.com/?red=https://prezi-sso3.prezi.com"
+                                   'Location': "https://sso.prezi.com/auth/?redirect_uri=https://prezi-sso3.prezi.com"
                                },
                                status=302)
 
         # run the tested method
         result = list(self.plugin.run())
 
-        self.assertEqual(SSOUnprotected.SSO_URL + "https://prezi-sso.prezi.com",
+        self.assertEqual("https://sso.prezi.com/auth/?redirect_uri=https://prezi-sso.prezi.com",
                          plugins.sso.fetch_url('https://prezi-sso.prezi.com')[1]['headers']['location'])
         self.assertEqual("https://full-https.prezi.com",
                          plugins.sso.fetch_url('http://full-https.prezi.com')[1]['headers']['location'])
-        self.assertEqual(SSOUnprotected.GODAUTH_URL + "https://godauth.prezi.com",
+        self.assertEqual("https://prezi.com/api/v2/auth/godauth/?ref=https://godauth.prezi.com",
                          plugins.sso.fetch_url('https://godauth.prezi.com')[1]['headers']['location'])
         self.assertEqual(('http://bla.prezi.com', None), plugins.sso.fetch_url('http://bla.prezi.com'))
-        self.assertEqual(1, len(result))
-        result = result[0]
-        self.assertEqual(
-            ["This domain (http://vuln.prezi.com) is neither behind SSO nor GODAUTH because redirects to None"],
-            result["details"])
-        self.assertEqual("http://vuln.prezi.com", result["id"])
+        self.assertEqual(2, len(result))
+        self.assertListEqual([
+            {'id': 'http://tbd-https.prezi.com',
+             'plugin_name': 'sso_unprotected',
+             'details': [
+                 'This domain (http://tbd-https.prezi.com) is neither behind SSO nor GODAUTH because redirects to https://tbd-https2.prezi.com']},
+            {'id': 'http://vuln.prezi.com',
+             'plugin_name': 'sso_unprotected',
+             'details': [
+                 'This domain (http://vuln.prezi.com) is neither behind SSO nor GODAUTH because redirects to None']}],
+            result)
 
         m.query.assert_has_calls([call('/api/v2/aws/hostedRecords;_expand')])
 
