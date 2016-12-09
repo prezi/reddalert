@@ -73,6 +73,7 @@ if __name__ == '__main__':
     from api import EddaClient, Coordinator, Alerter
     from plugins import plugin_list
 
+
     parser = argparse.ArgumentParser(description='Runs tests against AWS configuration')
     parser.add_argument('--configfile', '-c', default='etc/configfile.json', help='Configuration file')
     parser.add_argument('--statusfile', '-f', default='etc/statusfile.json', help='Persistent store between runs')
