@@ -9,7 +9,6 @@ from api.alerter import StdOutAlertSender
 
 
 class StdOutSenderTestCase(unittest.TestCase):
-
     def setUp(self):
         self.alerts = [
             ("simple", "_1_", "simple text"),
@@ -31,7 +30,6 @@ class StdOutSenderTestCase(unittest.TestCase):
 
 
 class EmailSenderTestCase(unittest.TestCase):
-
     def setUp(self):
         self.alerts = [
             ("simple", "_1_", "simple text"),
@@ -73,9 +71,9 @@ class EmailSenderTestCase(unittest.TestCase):
 
 
 class AlerterTestCase(unittest.TestCase):
-
     def setUp(self):
         self.alerts = [
+            {"plugin_name": "simple", "id": "_1_", "details": ["simple text"]},
             {"plugin_name": "simple", "id": "_1_", "details": ["simple text"]},
             {"plugin_name": "simple", "id": "_2_", "details": ["array1", "array2"]},
             {"plugin_name": "complex", "id": "_3_", "details": [{"foo": "bar"}, {"foo": "woo"}]}
@@ -94,7 +92,7 @@ class AlerterTestCase(unittest.TestCase):
 
         a.run(self.alerts)
 
-        self.assertEquals(5, len(a.recorded_alerts))
+        self.assertEquals(3, len(a.recorded_alerts))
         self.assertTrue(any(x[0] == "complex" for x in a.recorded_alerts))
         self.assertTrue(any(x[1] == "_2_" for x in a.recorded_alerts))
 
@@ -104,11 +102,10 @@ class AlerterTestCase(unittest.TestCase):
         a.run(self.alerts[0:2])
         a.run(self.alerts[2:])
 
-        self.assertEquals(5, len(a.recorded_alerts))
+        self.assertEquals(3, len(a.recorded_alerts))
 
 
 class ElasticSearchWriterTestCase(unittest.TestCase):
-
     def setUp(self):
         pass
 
