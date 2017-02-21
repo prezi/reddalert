@@ -3,6 +3,8 @@
 import logging
 import random
 import re
+import ssl
+import xml.etree.ElementTree as ET
 
 import boto
 from boto.exception import S3ResponseError
@@ -12,6 +14,10 @@ from boto.s3.key import Key
 
 boto.config.add_section('Boto')
 boto.config.set('Boto', 'http_socket_timeout', '10')
+
+# need to disable cert verification for bucket names with dots
+if hasattr(ssl, '_create_unverified_context'):
+    ssl._create_default_https_context = ssl._create_unverified_context
 
 
 class S3AclPlugin:
@@ -37,11 +43,23 @@ class S3AclPlugin:
     def run(self):
         return list(self.do_run(self.conn))
 
+    def get_bucket_and_set_region(self, bucketname):
+        bucket = self.conn.get_bucket(bucketname, validate=False)
+        # Read bucket location, just to make sure we have access to this region
+        try:
+            bucket.get_location()
+        except S3ResponseError as e:
+            if e.status == 400 and e.error_code == 'AuthorizationHeaderMalformed':
+                # Fix conn's region in case it was wrong
+                self.conn.auth_region_name = ET.fromstring(e.body).find('./Region').text
+        return self.conn.get_bucket(bucketname)  # get the bucket again, this time with validation
+
     def do_run(self, conn):
         buckets = self.filter_excluded_buckets(conn.get_all_buckets())
 
         for b in self.sample_population(buckets):
-            keys = self.filter_excluded_keys(self.traverse_bucket(b, ""))
+            good_bucket = self.get_bucket_and_set_region(b.name)
+            keys = self.filter_excluded_keys(self.traverse_bucket(good_bucket, ""))
             for k in keys:
                 alerts = self.suspicious_grants(k)
                 if alerts:
