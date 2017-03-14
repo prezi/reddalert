@@ -1,14 +1,15 @@
 #!/usr/bin/env python
+import socket
 import unittest
-
-from boto.exception import S3ResponseError
-from boto.s3.key import Key
-from mock import patch, Mock, MagicMock
+from mock import patch, Mock, call, MagicMock
 
 from plugins import S3AclPlugin
+from boto.s3.key import Key
+from boto.exception import S3ResponseError
 
 
 class PluginS3AclTestCase(unittest.TestCase):
+
     def setUp(self):
         self.plugin = S3AclPlugin()
         self.assertEqual(self.plugin.plugin_name, 's3acl')
@@ -44,7 +45,7 @@ class PluginS3AclTestCase(unittest.TestCase):
 
             key.get_acl = Mock(return_value=acp)
             self.plugin.init(Mock(), {'user': 'bob', 'key': 'xxx', 'allowed_specific': {
-                'allowed_bucket': [{'uid': 'id2', 'op': 'permission2'}]}}, {})
+                             'allowed_bucket': [{'uid': 'id2', 'op': 'permission2'}]}}, {})
             self.assertEqual(self.plugin.suspicious_grants(key), ['id permission'])
 
     def test_traverse_bucket(self, *mocks):
@@ -78,16 +79,16 @@ class PluginS3AclTestCase(unittest.TestCase):
             self.assertEqual(self.plugin.traverse_bucket(bucket, ''), [key])
 
     @patch('plugins.S3AclPlugin.sample_population', return_value=[Mock()])
-    @patch('plugins.S3AclPlugin.get_bucket_and_set_region', return_value=[Mock()])
-    def test_do_run(self, mock_get_bucket_and_set_region, mock_sample_population):
-        bucket = Mock(name='mybucket1')
-        bucket.name = 'bucket1'
+    def test_do_run(self, *mocks):
+
         key1 = Mock(Key)
         key1.name = 'key1'
-        key1.bucket = bucket
+        key1.bucket = Mock()
+        key1.bucket.name = 'bucket1'
         key2 = Mock(Key)
         key2.name = 'key2'
-        key2.bucket = bucket
+        key2.bucket = Mock()
+        key2.bucket.name = 'bucket1'
 
         def ret_keys(key):
             if key == key1:
@@ -96,11 +97,12 @@ class PluginS3AclTestCase(unittest.TestCase):
 
         with patch('plugins.S3AclPlugin.traverse_bucket', return_value=[key1, key2]) as MockClass:
             with patch('plugins.S3AclPlugin.suspicious_grants', side_effect=ret_keys):
+
                 self.plugin.init(Mock(), {'user': 'bob', 'key': 'xxx'}, {})
                 # run the tested method
                 self.assertEqual(list(self.plugin.do_run(MagicMock())), [
-                    {'details': ['id permission'], 'id': 'bucket1:key1',
-                     'url': 'https://s3.amazonaws.com/bucket1/key1', 'plugin_name': 's3acl'}])
+                                 {'details': ['id permission'], 'id': 'bucket1:key1',
+                                  'url': 'https://s3.amazonaws.com/bucket1/key1', 'plugin_name': 's3acl'}])
 
     def test_survive_s3error_traverse(self):
         bucket = Mock()
@@ -128,8 +130,7 @@ class PluginS3AclTestCase(unittest.TestCase):
         bucket3 = Mock(Key)
         bucket3.name = 'bucket3'
 
-        self.plugin.init(Mock(), {'user': 'bob', 'key': 'xxx', 'excluded_buckets': ['bucket[13]+', 'shouldntmatter.*']},
-                         {})
+        self.plugin.init(Mock(), {'user': 'bob', 'key': 'xxx', 'excluded_buckets': ['bucket[13]+', 'shouldntmatter.*']}, {})
         r = self.plugin.filter_excluded_buckets([bucket1, bucket2, bucket3])
         self.assertEqual([bucket2], r)
 
@@ -143,15 +144,13 @@ class PluginS3AclTestCase(unittest.TestCase):
         key2.bucket = Mock()
         key2.bucket.name = 'bucket1'
 
-        self.plugin.init(Mock(),
-                         {'user': 'bob', 'key': 'xxx', 'excluded_keys': ['^bucket[13]:.*2$', 'shouldntmatter.*']}, {})
+        self.plugin.init(Mock(), {'user': 'bob', 'key': 'xxx', 'excluded_keys': ['^bucket[13]:.*2$', 'shouldntmatter.*']}, {})
         r = self.plugin.filter_excluded_keys([key1, key2])
         self.assertEqual([key1], r)
 
 
 def main():
     unittest.main()
-
 
 if __name__ == '__main__':
     main()
