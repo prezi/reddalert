@@ -3,8 +3,8 @@
 AWS security monitoring/alerting tool built on top of Netflix's [EDDA](https://github.com/Netflix/edda) project.
 
 What do we want to see? Examples:
- * security group whitelists some wierd port(range)
- * ELB forwards traffic to some wierd port
+ * security group whitelists some weird port(range)
+ * ELB forwards traffic to some weird port
  * an EC2 instance was created from an AMI not seen before
  * IAM user added to a group
 
