@@ -26,7 +26,9 @@
     "sso_url": "",
     "zone": "",
     "legit_domains": [],
-    "exception_domains": []
+    "exception_domains": [
+      "cdn04.stage.prezi.com"
+    ]
   },
   "plugin.security_headers": {
     "zone": "",

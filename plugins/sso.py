@@ -16,8 +16,10 @@ def fetch_url(location):
 
     return location, None
 
+
 def one_starts_with_another(one, two):
     return one.startswith(two) or two.startswith(one)
+
 
 class BaseClass:
     PROCESSING_POOL_SIZE = 8
@@ -62,8 +64,9 @@ class BaseClass:
 
 class SSOUnprotected(BaseClass):
     UNPROTECTED = 'unprotected'
-    SSO_URL = ''
-    GODAUTH_URL = ''
+    SSO_URL = None
+    GODAUTH_URL = None
+    VALID_URL_RE = re.compile(r'https?://(.*)/?', re.IGNORECASE)
 
     def __init__(self):
         self.plugin_name = 'sso_unprotected'
@@ -76,8 +79,8 @@ class SSOUnprotected(BaseClass):
         self._initialize_status()
 
     def _initialize_status(self):
-        SSOUnprotected.GODAUTH_URL = self.config['godauth_url']
-        SSOUnprotected.SSO_URL = self.config['sso_url']
+        self.GODAUTH_URL = re.compile(self.config['godauth_url'], re.IGNORECASE)
+        self.SSO_URL = re.compile(self.config['sso_url'], re.IGNORECASE)
         if 'redirects' not in self.status:
             self.status['redirects'] = []
 
@@ -90,36 +93,32 @@ class SSOUnprotected(BaseClass):
         alerts = {
             loc: redirect_url for loc, redirect_url in redirects.iteritems()
             if loc not in old_redirects or old_redirects[loc] != redirect_url
-        }
+            }
         self.status["redirects"] = redirects
         for tested_url, location_header in alerts.iteritems():
-            loc_re = re.search(r'https?://(.*)', tested_url)
-            red_re = re.search(r'https?://(.*)', location_header)
+            tested_url_domain_re = self.VALID_URL_RE.match(tested_url)
 
-            sso_redirect_url = self.SSO_URL + tested_url
-            sso_redirect_url_https = re.sub(r"^http://", "https://", sso_redirect_url)
-            godauth_redirect_url = self.GODAUTH_URL + tested_url
+            if not tested_url_domain_re:
+                self.logger.error('Invalid tested URL or location header: %s %s', tested_url, location_header)
+            else:
+                tested_domain = tested_url_domain_re.group(1)
+                print 'tested_domain', tested_domain, location_header
+                godauth_match = self.GODAUTH_URL.match(location_header)
+                sso_match = self.SSO_URL.match(location_header)
 
-            if one_starts_with_another(sso_redirect_url, location_header) or \
-                    one_starts_with_another(godauth_redirect_url, location_header) or \
-                    one_starts_with_another(sso_redirect_url_https, location_header):
-                continue
-
-            if red_re and red_re.group(1).startswith('tbd-'):
-                continue
-
-            if red_re and loc_re:
-                tested_domain = loc_re.group(1)
-                https_tested_domain = 'https://' + tested_domain
-                if one_starts_with_another(https_tested_domain, location_header):
+                # full HTTPS site or redirects to SSO URLs
+                if location_header.startswith('https://' + tested_domain) or \
+                        (godauth_match and godauth_match.group(1) == tested_domain) or \
+                        (sso_match and sso_match.group(1) == tested_domain):
                     continue
 
-            yield {
-                "plugin_name": self.plugin_name,
-                "id": tested_url,
-                "details": list(["This domain (%s) is neither behind SSO nor GODAUTH because redirects to %s" % (
-                    tested_url, location_header)])
-            }
+                yield {
+                    "plugin_name": self.plugin_name,
+                    "id": tested_url,
+                    "details": list(
+                        ["This domain (%s) is neither behind SSO nor GODAUTH because redirects to %s" % (
+                            tested_url, location_header)])
+                }
 
 
 class SecurityHeaders(BaseClass):

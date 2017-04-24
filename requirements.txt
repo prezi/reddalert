@@ -1,5 +1,5 @@
 argparse==1.2.1
-boto==2.23.0
+boto==2.45.0
 elasticsearch==2.1.0
 requests==2.6.0
 lockfile==0.10.2

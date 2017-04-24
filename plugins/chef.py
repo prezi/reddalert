@@ -46,6 +46,9 @@ class NonChefPlugin:
         if 'aws:elasticmapreduce:instance-group-role' in tags:
             return True  # EMR nodes
 
+        if tags.get('purpose') in ['conversion-to-xenial']:
+            return True  # PoC machines for the Xenial upgrade, TODO: remove it once experiment is done
+
         service_name = tags.get('service_name', None) or tags.get('Name', None)
         for excluded_instance in self.excluded_instances:
             if service_name is not None and re.match(excluded_instance, service_name):

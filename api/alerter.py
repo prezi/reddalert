@@ -114,5 +114,7 @@ class Alerter:
                 alerter.send_alerts(configuration, self.recorded_alerts)
 
     def run(self, alert_obj):
-        normalized_alerts = [(a['plugin_name'], a['id'], d) for a in alert_obj for d in a['details']]
-        self.recorded_alerts.extend(normalized_alerts)
+        # don't store duplicate alerts
+        alerts_obj = {a['id']: (a['plugin_name'], a['id'], d) for a in alert_obj for d in a['details']}
+
+        self.recorded_alerts.extend(alerts_obj.values())
