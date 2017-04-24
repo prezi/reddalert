@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import unittest
 
-from mock import Mock, call
-from plugins.route53 import load_route53_entries, is_external
+from mock import Mock, call, patch, MagicMock
+from plugins.route53 import load_route53_entries, is_external, page_process_for_route53changed
 
 
 class LoadRoute53EntriesTestCase(unittest.TestCase):
@@ -48,6 +48,33 @@ class IsExternalTestCase(unittest.TestCase):
         result = result[0]
         self.assertEqual("ami-2", result["imageId"])
         self.assertEqual(1, len(result["resourceRecords"]))
+
+
+class Route53ChangedDoesNotExist(unittest.TestCase):
+    @patch('plugins.route53.urllib2')
+    def test_run(self, mock_urllib2):
+        import re
+        does_not_exist_regexes = [
+            re.compile(r"NoSuchBucket|NoSuchKey|NoSuchVersion"),  # NoSuch error messages from S3
+            re.compile(r"[Ee]xpir(ed|y|es)"),  # expiry messages
+            re.compile(r"not exists?")  # generic does not exist
+        ]
+
+        def mocked_get_location_content(location, *args, **kwargs):
+            if location == "https://prezi.com/nosuch1":
+                return MagicMock(read=MagicMock(side_effect=lambda: "somethingNoSuchBucketsomethingsomething"))
+            if location == "https://meh.prezi.com":
+                return MagicMock(read=MagicMock(side_effect=lambda: "OK, whatevs"))
+            if location == "https://my404.prezi.com":
+                return MagicMock(read=MagicMock(side_effect=lambda: "this page does not exist"))
+
+        mock_urllib2.urlopen = MagicMock(side_effect=mocked_get_location_content)
+        results = list(page_process_for_route53changed('https://prezi.com/nosuch1', does_not_exist_regexes))
+        self.assertEquals(set(['NoSuchBucket|NoSuchKey|NoSuchVersion']), results[1]["matches"])
+        results = list(page_process_for_route53changed('https://meh.prezi.com', does_not_exist_regexes))
+        self.assertEquals(set([]), results[1]["matches"])
+        results = list(page_process_for_route53changed('https://my404.prezi.com', does_not_exist_regexes))
+        self.assertEquals(set(["not exists?"]), results[1]["matches"])
 
 
 def main():
