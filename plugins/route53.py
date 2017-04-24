@@ -165,8 +165,18 @@ class Route53Changed:
                 # { "https://something.prezi.com": "sha224", ... }
                 return old_hashes[location] != new_hash
 
+        def backward_compatible_match_compare(location, old_hashes, new_hash):
+            if type(old_hashes[location]) is dict:
+                # if we are working with the new schema, return True only if
+                # there was a change in the previous state so that we do not
+                # get alerted multiple times for the same (location, matches) pairs
+                return len(old_hashes[location]["matches"]) != len(new_hash["matches"])
+            else:
+                # if the state is not updated yet, alert if there is any match
+                return len(new_hash["matches"]) > 0
+
         hash_changed_alerts = {loc: h for loc, h in hashes.iteritems() if loc not in old_hashes or backward_compatible_hash_compare(loc, old_hashes, h)}
-        does_not_exist_alerts = {loc: h for loc, h in hashes.iteritems() if len(h["matches"]) > 0 }
+        does_not_exist_alerts = {loc: h for loc, h in hashes.iteritems() if loc not in old_hashes or backward_compatible_match_compare(loc, old_hashes, h) }
         self.status["hashes"] = hashes
         for location, info in hash_changed_alerts.iteritems():
             dns_name = "%s." % re.search('http[s]*://(.*)', location).group(1)
@@ -178,11 +188,13 @@ class Route53Changed:
             }
 
         for location, info in does_not_exist_alerts.iteritems():
-            yield {
-                "plugin_name": self.plugin_name,
-                "id": "location",
-                "details": "location matches the following regexes: %s" % info["matches"] + "\n (S3 bucket removed maybe?)"
-            }
+            # if there are no matches, we do not emit an alert
+            if len(info["matches"]) > 0:
+                yield {
+                    "plugin_name": self.plugin_name,
+                    "id": "location",
+                    "details": "location matches the following regexes: %s" % info["matches"] + "\n (S3 bucket removed maybe?)"
+                }
 
     def load_aws_ips(self):
         aws_machines = self.edda_client.soft_clean().query("/api/v2/view/instances;_expand")
