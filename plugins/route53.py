@@ -151,7 +151,7 @@ class Route53Changed:
         locations_https = ["https://%s" % name for name in not_aws.keys()]
         locations = list(locations_http + locations_https)
         self.logger.info("fetching %d urls on 16 threads" % len(locations))
-        hashed_items = Pool(16).map(partial(page_process_for_route53changed(match_regexes=self.does_not_exist_regexes), locations))
+        hashed_items = Pool(16).map(partial(page_process_for_route53changed, match_regexes=self.does_not_exist_regexes), locations)
         hashes = dict(hashed_items)
         old_hashes = self.status.get("hashes", {})
 
