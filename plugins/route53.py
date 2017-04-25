@@ -48,7 +48,6 @@ def page_process_for_route53changed(location, match_regexes=[]):
         if len(page_content) <= 255:
             page_top = page_content
 
-        print(page_top)
         matches = set([])
         for regex in match_regexes:
             if re.search(regex, page_content[:2048]):
@@ -180,7 +179,7 @@ class Route53Changed:
                 yield {
                     "plugin_name": self.plugin_name,
                     "id": "location",
-                    "details": "location matches the following regexes: %s" % info["matches"] + "\n (S3 bucket removed maybe?)"
+                    "details": "location matches the following regexes: %s" % info["matches"] + "\n (S3 bucket removed or domain expired?)"
                 }
 
     def load_aws_ips(self):
