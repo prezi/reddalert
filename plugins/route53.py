@@ -43,7 +43,7 @@ def load_route53_entries(edda_client, zone=None):
 
 route53_changed_no_content_regexes = [
             re.compile(r"NoSuchBucket|NoSuchKey|NoSuchVersion"),      # NoSuch error messages from S3
-            re.compile(r"[Ee]xpir\(ed|y|es\)"),                       # expiry messages
+            re.compile(r"[Ee]xpir(ed|y|es)"),                       # expiry messages
             re.compile(r"not exists?")                                # generic does not exist
 ]
 
