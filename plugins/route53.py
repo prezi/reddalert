@@ -10,8 +10,10 @@ from multiprocessing import Pool
 from IPy import IP
 from functools import partial
 
+
 def is_ip_unknown(ip, ip_set):
     return ip not in ip_set
+
 
 def is_cname_unknown(record, ip_set, legit_domains):
     if any(record.endswith(le) for le in legit_domains):
@@ -23,9 +25,11 @@ def is_cname_unknown(record, ip_set, legit_domains):
 
     return True
 
+
 def is_external(entry, ip_set, legit_domains):
     aliases = [r.get("value") for r in entry.get("resourceRecords")]
     return any(is_ip_unknown(r, ip_set) and is_cname_unknown(r, ip_set, legit_domains) for r in aliases)
+
 
 def is_ip_private(ip_addr):
     try:
@@ -34,18 +38,20 @@ def is_ip_private(ip_addr):
     except:
         return False
 
+
 def load_route53_entries(edda_client, zone=None):
     zone_selector = ";zone.name=%s" % zone if zone else ""
     route53_entries_raw = edda_client.clean().query("/api/v2/aws/hostedRecords%s;_expand" % zone_selector)
-    route53_entries_dict = {e.get("name"): e for e in route53_entries_raw} # make it distinct
+    route53_entries_dict = {e.get("name"): e for e in route53_entries_raw}  # make it distinct
     return route53_entries_dict.values()
 
 
 route53_changed_no_content_regexes = [
-            re.compile(r"NoSuchBucket|NoSuchKey|NoSuchVersion"),      # NoSuch error messages from S3
-            re.compile(r"[Ee]xpir(ed|y|es)"),                       # expiry messages
-            re.compile(r"not exists?")                                # generic does not exist
+    re.compile(r"NoSuchBucket|NoSuchKey|NoSuchVersion"),  # NoSuch error messages from S3
+    re.compile(r"[Ee]xpir(ed|y|es)"),  # expiry messages
+    re.compile(r"not exists?")  # generic does not exist
 ]
+
 
 def page_process_for_route53changed(location):
     try:
@@ -67,7 +73,6 @@ def page_process_for_route53changed(location):
 
 
 class Route53Unknown:
-
     def __init__(self):
         self.plugin_name = 'route53unknown'
         self.logger = logging.getLogger(self.plugin_name)
@@ -123,11 +128,10 @@ class Route53Unknown:
         self.logger.debug("Loading public IP list from AWS")
         aws_machines = self.edda_client.soft_clean().query("/api/v2/view/instances;_expand")
         aws_ips = [m.get("publicIpAddress") for m in aws_machines]
-        return set(sum(cloud_ips, []) + sum(phy_ips, []) + aws_ips) #flatten
+        return set(sum(cloud_ips, []) + sum(phy_ips, []) + aws_ips)  # flatten
 
 
 class Route53Changed:
-
     def __init__(self):
         self.plugin_name = 'route53changed'
         self.logger = logging.getLogger(self.plugin_name)
@@ -149,7 +153,8 @@ class Route53Changed:
         dns_names = self.load_known_dns()
         # using bugbounty.prezi.com for testing
         not_aws = {name: entry for name, entry in dns_names.iteritems()
-                   if name == "bugbounty.prezi.com." or (is_external(entry, ips, legit_domains) and name not in exempts)}
+                   if
+                   name == "bugbounty.prezi.com." or (is_external(entry, ips, legit_domains) and name not in exempts)}
         locations_http = ["http://%s" % name for name in not_aws.keys()]
         locations_https = ["https://%s" % name for name in not_aws.keys()]
         locations = list(locations_http + locations_https)
@@ -168,22 +173,19 @@ class Route53Changed:
                 # { "https://something.prezi.com": "sha224", ... }
                 return old_hashes[location] != new_hash
 
-        hash_changed_alerts = {loc: h for loc, h in hashes.iteritems() if loc not in old_hashes or backward_compatible_hash_compare(loc, old_hashes, h)}
+        hash_changed_alerts = {loc: h for loc, h in hashes.iteritems() if
+                               loc not in old_hashes or backward_compatible_hash_compare(loc, old_hashes, h)}
         self.status["hashes"] = hashes
         for location, info in hash_changed_alerts.iteritems():
             dns_name = "%s." % re.search('http[s]*://(.*)', location).group(1)
-            dns_entry_info = not_aws.get(dns_name,"no_dns_entry_info_found")
-            yield {
-                "plugin_name": self.plugin_name,
-                "id": location,
-                "details": ("new page (dns entry info: %s)" % str(dns_entry_info),) if location not in old_hashes else ("page changed (%s) new_hash: %s" % (str(dns_entry_info), info["hash"]),)
-            }
+            dns_entry_info = not_aws.get(dns_name, "no_dns_entry_info_found")
 
             if len(info["matches"]) > 0:
                 yield {
                     "plugin_name": self.plugin_name,
                     "id": location,
-                    "details": ("location matches the following regexes: %s" % info["matches"] + "\n (S3 bucket removed or domain expired?)",)
+                    "details": ("location matches the following regexes: %s" % info[
+                        "matches"] + "\n (S3 bucket removed or domain expired?) \n dns_entry_info: %s" % dns_entry_info,)
                 }
 
     def load_aws_ips(self):
