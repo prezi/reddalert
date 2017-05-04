@@ -9,7 +9,8 @@ from chef import Search, ChefAPI
 from multiprocessing import Pool
 from IPy import IP
 from functools import partial
-
+from chef.exceptions import ChefServerError
+import time
 
 def is_ip_unknown(ip, ip_set):
     return ip not in ip_set
@@ -121,7 +122,20 @@ class Route53Unknown:
 
     def load_known_ips(self):
         self.logger.debug("Loading public IP list from chef")
-        nodes = list(Search('node', '*:*', rows=2000, api=self.chef_api))
+        chunk_size = 500
+        nodes = []
+        for retry in xrange(5):
+            try:
+                del nodes[:]  # clear partial results
+
+                for offset in xrange(2000 // chunk_size):
+                    search_result = Search('node', '*:*', start=offset * chunk_size, rows=chunk_size, api=self.chef_api)
+                    nodes += list(search_result)
+
+                break
+            except ChefServerError:
+                time.sleep(5)
+
         cloud_ips = [node.get("automatic", {}).get("cloud", {}).get("public_ips", []) for node in nodes]
         phy_ifaces = sum([node["automatic"].get("network", {}).get("interfaces", {}).values() for node in nodes], [])
         phy_ips = [i.get("addresses", {}).keys() for i in phy_ifaces]
