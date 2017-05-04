@@ -67,7 +67,7 @@ class NonChefPlugin:
 
         for retry in xrange(5):
             try:
-                chunk_size = 1000
+                chunk_size = 500
                 result = {}
                 for offset in xrange(10000//chunk_size):
                     search_result = Search('node', start=offset * chunk_size, rows=chunk_size, api=self.api)
