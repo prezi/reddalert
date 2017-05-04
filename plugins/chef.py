@@ -65,12 +65,18 @@ class NonChefPlugin:
             else:
                 return chef_node.get('automatic', {}).get('ipaddress')
 
-        for i in xrange(5):
+        for retry in xrange(5):
             try:
-                search_result = Search('node', rows=10000, api=self.api)
-                if search_result:
-                    return {get_public_ip(node): node for node in search_result if
-                            get_public_ip(node) and IP(get_public_ip(node)).iptype() != 'PRIVATE'}
+                chunk_size = 1000
+                result = {}
+                for offset in xrange(10000//chunk_size):
+                    search_result = Search('node', start=offset * chunk_size, rows=chunk_size, api=self.api)
+                    if search_result:
+                        sub_result = {get_public_ip(node): node for node in search_result if
+                                      get_public_ip(node) and IP(get_public_ip(node)).iptype() != 'PRIVATE'}
+                        result.update(sub_result)
+                    else:
+                        return result
             except ChefServerError:
                 time.sleep(5)
 
