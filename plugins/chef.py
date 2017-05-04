@@ -75,8 +75,8 @@ class NonChefPlugin:
                         sub_result = {get_public_ip(node): node for node in search_result if
                                       get_public_ip(node) and IP(get_public_ip(node)).iptype() != 'PRIVATE'}
                         result.update(sub_result)
-                    else:
-                        return result
+
+                return result
             except ChefServerError:
                 time.sleep(5)
 
