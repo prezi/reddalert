@@ -64,10 +64,11 @@ class NonChefPlugin:
         def get_public_ip(chef_node):
             node_data = chef_node.get('data', {})
             public_ipv4 = node_data.get('cloud_public_ipv4', None)
+            ipaddress = node_data.get('ipaddress', None)
             if public_ipv4:
                 return public_ipv4
-            else:
-                return node_data.get('ipaddress', None)
+            elif ipaddress:
+                return ipaddress
 
         chunk_size = 2000
         result = {}
@@ -95,7 +96,7 @@ class NonChefPlugin:
                         partial_result = {get_public_ip(node): node.get('data', {}) for node in node_list
                                           if get_public_ip(node) and IP(get_public_ip(node)).iptype() != 'PRIVATE'}
                         result.update(partial_result)
-                        break
+                    break
                 except ChefServerError:
                     if retry == 4:
                         self.logger.exception("Chef API failed after 5 retries: POST /search/node")

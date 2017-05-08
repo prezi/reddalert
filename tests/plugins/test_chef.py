@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-
+import json
 import unittest
 
-from mock import patch, Mock
+from mock import patch, Mock, MagicMock
 
 from api import InstanceEnricher
 from plugins import NonChefPlugin
@@ -22,6 +22,12 @@ class PluginNonChefTestCase(unittest.TestCase):
             self.plugin.init(Mock(), self.config, {}, Mock())
             self.assertEqual(self.plugin.excluded_instances, ['jenkins'])
             mock.assert_called_once_with('foo', '<key_file>', 'bar')
+
+    def wrap_chef_result(self, node):
+        if node:
+            return json.dumps({'rows': [{'data': node}]})
+        else:
+            return json.dumps({'rows': []})
 
     @patch('plugins.chef.ChefAPI')
     def test_handle_invalid_chef_data(self, *mocks):
@@ -46,18 +52,18 @@ class PluginNonChefTestCase(unittest.TestCase):
         eddaclient._since = 3 * 3600000
         eddaclient._until = 4 * 3600000 + 1
 
-        def chef_list(*args, **kwargs):
-            return [
-                {'name': 'host3', 'automatic': {'cloud': {'foo': '1.1.1.1'}}},
-                {'name': 'host4', 'automatic': {'foo': {'public_ipv4': '2.1.1.1'}}},
-                {'foo': {'cloud': {'public_ipv4': '3.1.1.1'}}}
-            ]
+        chef_result_list = [
+            self.wrap_chef_result({'name': 'host3', 'cloud_foo': '1.1.1.1'}),
+            self.wrap_chef_result({'name': 'host4'}),
+            self.wrap_chef_result({'foo_what': 'bar', 'cloud_public_ipv6': ':da7a::', 'cloud_provider': 'ec2'}),
+            self.wrap_chef_result(None),
+            self.wrap_chef_result(None)
+        ]
 
-        with patch('plugins.chef.Search', side_effect=chef_list):
+        with patch('plugins.chef.ChefAPI', return_value=MagicMock(request=MagicMock(side_effect=chef_result_list))):
             self.plugin.init(eddaclient, self.config, {}, instance_enricher)
 
             alerts = list(self.plugin.do_run())
-
             # no valid chef data was returned
             self.assertEqual(0, len(alerts))
 
@@ -88,17 +94,16 @@ class PluginNonChefTestCase(unittest.TestCase):
         eddaclient._since = 3 * 3600000
         eddaclient._until = 4 * 3600000 + 1
 
-        def chef_list(*args, **kwargs):
-            return [
-                {'name': 'ec2 alive', 'automatic': {'cloud': {'public_ipv4': '1.1.1.1', 'provider': 'ec2'}}},
-                {'name': 'non-ec2 but cloud host alive', 'automatic': {'cloud': {'public_ipv4': '2.1.1.1'}}},
-                {'name': 'ec2 host dead', 'automatic': {'cloud': {'public_ipv4': '255.1.1.1', 'provider': 'ec2'}}},
-                {'name': 'non-ec2 host', 'automatic': {'ipaddress': '5.1.1.1'}},
-            ]
+        chef_result_list = [
+            self.wrap_chef_result({'name': 'ec2 alive', 'cloud_public_ipv4': '1.1.1.1', 'cloud_provider': 'ec2'}),
+            self.wrap_chef_result({'name': 'non-ec2 but cloud host alive', 'cloud_public_ipv4': '2.1.1.1'}),
+            self.wrap_chef_result({'name': 'ec2 host dead', 'cloud_public_ipv4': '255.1.1.1', 'cloud_provider': 'ec2'}),
+            self.wrap_chef_result({'name': 'non-ec2 host', 'ipaddress': '5.1.1.1'}),
+            self.wrap_chef_result(None)
+        ]
 
-        with patch('plugins.chef.Search', side_effect=chef_list) as MockClass:
+        with patch('plugins.chef.ChefAPI', return_value=MagicMock(request=MagicMock(side_effect=chef_result_list))):
             self.plugin.init(eddaclient, self.config, {}, instance_enricher)
-
             alerts = list(self.plugin.do_run())
             non_chef_alerts = [i for i in alerts if i['plugin_name'] == 'non_chef']
             chef_managed_alerts = [i for i in alerts if i['plugin_name'] == 'chef_managed']
@@ -138,13 +143,15 @@ class PluginNonChefTestCase(unittest.TestCase):
         eddaclient._since = 10 * 3600000
         eddaclient._until = 11 * 3600000
 
-        def chef_list(*args, **kwargs):
-            return [
-                {'name': 'host0', 'automatic': {'cloud': {'public_ipv4': '4.1.1.1'}}},
-                {'name': 'host1', 'automatic': {'cloud': {'public_ipv4': '6.1.1.1'}}}
-            ]
+        chef_result_list = [
+            self.wrap_chef_result({'name': 'host0', 'cloud_public_ipv4': '4.1.1.1'}),
+            self.wrap_chef_result({'name': 'host1', 'cloud_public_ipv4': '6.1.1.1'}),
+            self.wrap_chef_result(None),
+            self.wrap_chef_result(None),
+            self.wrap_chef_result(None)
+        ]
 
-        with patch('plugins.chef.Search', side_effect=chef_list) as MockClass:
+        with patch('plugins.chef.ChefAPI', return_value=MagicMock(request=MagicMock(side_effect=chef_result_list))):
             self.plugin.init(eddaclient, self.config, {"first_seen": {'f': 8}}, instance_enricher)
 
             alerts = list(self.plugin.do_run())
