@@ -5,9 +5,11 @@ from __future__ import absolute_import
 import logging
 import re
 import time
+import urllib
+import json
 
 from IPy import IP
-from chef import Search, ChefAPI
+from chef import ChefAPI
 from chef.exceptions import ChefServerError
 
 
@@ -60,25 +62,45 @@ class NonChefPlugin:
 
     def get_chef_hosts(self):
         def get_public_ip(chef_node):
-            if 'cloud' in chef_node.get('automatic', {}):
-                return chef_node.get('automatic', {}).get('cloud', {}).get('public_ipv4')
+            node_data = chef_node.get('data', {})
+            public_ipv4 = node_data.get('cloud_public_ipv4', None)
+            if public_ipv4:
+                return public_ipv4
             else:
-                return chef_node.get('automatic', {}).get('ipaddress')
+                return node_data.get('ipaddress', None)
 
-        for retry in xrange(5):
-            try:
-                chunk_size = 500
-                result = {}
-                for offset in xrange(10000//chunk_size):
-                    search_result = Search('node', start=offset * chunk_size, rows=chunk_size, api=self.api)
-                    if search_result:
-                        sub_result = {get_public_ip(node): node for node in search_result if
-                                      get_public_ip(node) and IP(get_public_ip(node)).iptype() != 'PRIVATE'}
-                        result.update(sub_result)
-
-                return result
-            except ChefServerError:
-                time.sleep(5)
+        chunk_size = 2000
+        result = {}
+        requested_node_attributes = {
+            'cloud_public_ipv4': ['cloud', 'public_ipv4'],
+            'ipaddress': ['ipaddress'],
+            'cloud_provider': ['cloud', 'provider'],
+            'machinename': ['machinename'],
+            'name': ['name'],
+            'fqdn': ['fqdn'],
+            'platform': ['platform'],
+            'os': ['os'],
+            'os_version': ['os_version']
+        }
+        for offset in xrange(5):
+            get_params = urllib.urlencode({'q': '*:*', 'start': offset * chunk_size, 'rows': chunk_size})
+            for retry in xrange(5):
+                try:
+                    search_result = self.api.request('POST', '/search/node?{}'.format(get_params),
+                                                     headers={'accept': 'application/json'},
+                                                     data=json.dumps(requested_node_attributes)
+                                                     )
+                    node_list = json.loads(search_result).get('rows', [])
+                    if node_list:
+                        partial_result = {get_public_ip(node): node.get('data', {}) for node in node_list
+                                          if get_public_ip(node) and IP(get_public_ip(node)).iptype() != 'PRIVATE'}
+                        result.update(partial_result)
+                        break
+                except ChefServerError:
+                    if retry == 4:
+                        self.logger.exception("Chef API failed after 5 retries: POST /search/node")
+                    time.sleep(5)
+        return result
 
     def do_run(self):
         def _create_alert(plugin_name, alert_id, details):
@@ -91,11 +113,11 @@ class NonChefPlugin:
         def _enrich_with_chef(chef_node):
             return {
                 'chef_node_name': chef_node.get('name'),
-                'hostname': chef_node['automatic'].get('machinename'),
-                'fqdn': chef_node['automatic'].get('fqdn'),
-                'platform': chef_node['automatic'].get('platform'),
-                'operating_system': chef_node['automatic'].get('os'),
-                'operating_system_version': chef_node['automatic'].get('os_version'),
+                'hostname': chef_node.get('machinename'),
+                'fqdn': chef_node.get('fqdn'),
+                'platform': chef_node.get('platform'),
+                'operating_system': chef_node.get('os'),
+                'operating_system_version': chef_node.get('os_version'),
             }
 
         # NOTE! an instance has 3 hours to register itself to chef!
@@ -143,7 +165,7 @@ class NonChefPlugin:
         # handle non-ec2 chef hosts
         ec2_public_ips = [m['publicIpAddress'] for m in ec2_instances]
         for public_ip, chef_node in chef_hosts.iteritems():
-            if public_ip not in ec2_public_ips and chef_node['automatic'].get('cloud', {}).get('provider') != 'ec2':
+            if public_ip not in ec2_public_ips and chef_node.get('cloud_provider') != 'ec2':
                 # found a chef managed non-EC2 host, create an event so we can run conformity checks on it
                 chef_details = _enrich_with_chef(chef_node)
                 chef_details['publicIpAddress'] = public_ip
