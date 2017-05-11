@@ -12,6 +12,9 @@ from functools import partial
 from chef.exceptions import ChefServerError
 import time
 
+from api.chefclient import ChefClient
+
+
 def is_ip_unknown(ip, ip_set):
     return ip not in ip_set
 
@@ -122,22 +125,17 @@ class Route53Unknown:
 
     def load_known_ips(self):
         self.logger.debug("Loading public IP list from chef")
-        chunk_size = 500
-        nodes = []
-        for retry in xrange(5):
-            try:
-                del nodes[:]  # clear partial results
 
-                for offset in xrange(2000 // chunk_size):
-                    search_result = Search('node', '*:*', start=offset * chunk_size, rows=chunk_size, api=self.chef_api)
-                    nodes += list(search_result)
+        requested_node_attributes = {
+            'cloud_public_ips': ['cloud', 'public_ips'],
+            'network_interfaces': ['network', 'interfaces'],
+        }
 
-                break
-            except ChefServerError:
-                time.sleep(5)
+        nodes = ChefClient(self.chef_api, self.plugin_name).search_chef_hosts(requested_node_attributes)
 
-        cloud_ips = [node.get("automatic", {}).get("cloud", {}).get("public_ips", []) for node in nodes]
-        phy_ifaces = sum([node["automatic"].get("network", {}).get("interfaces", {}).values() for node in nodes], [])
+
+        cloud_ips = [node.get("cloud_public_ips", []) for node in nodes]
+        phy_ifaces = sum([node.get("network_interfaces", {}).values() for node in nodes], [])
         phy_ips = [i.get("addresses", {}).keys() for i in phy_ifaces]
         self.logger.debug("Loading public IP list from AWS")
         aws_machines = self.edda_client.soft_clean().query("/api/v2/view/instances;_expand")

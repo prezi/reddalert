@@ -11,6 +11,7 @@ import json
 from IPy import IP
 from chef import ChefAPI
 from chef.exceptions import ChefServerError
+from api.chefclient import ChefClient
 
 
 class NonChefPlugin:
@@ -62,16 +63,13 @@ class NonChefPlugin:
 
     def get_chef_hosts(self):
         def get_public_ip(chef_node):
-            node_data = chef_node.get('data', {})
-            public_ipv4 = node_data.get('cloud_public_ipv4', None)
-            ipaddress = node_data.get('ipaddress', None)
+            public_ipv4 = chef_node.get('cloud_public_ipv4', None)
+            ipaddress = chef_node.get('ipaddress', None)
             if public_ipv4:
                 return public_ipv4
             elif ipaddress:
                 return ipaddress
 
-        chunk_size = 2000
-        result = {}
         requested_node_attributes = {
             'cloud_public_ipv4': ['cloud', 'public_ipv4'],
             'ipaddress': ['ipaddress'],
@@ -83,25 +81,10 @@ class NonChefPlugin:
             'os': ['os'],
             'os_version': ['os_version']
         }
-        for offset in xrange(5):
-            get_params = urllib.urlencode({'q': '*:*', 'start': offset * chunk_size, 'rows': chunk_size})
-            for retry in xrange(5):
-                try:
-                    search_result = self.api.request('POST', '/search/node?{}'.format(get_params),
-                                                     headers={'accept': 'application/json'},
-                                                     data=json.dumps(requested_node_attributes)
-                                                     )
-                    node_list = json.loads(search_result).get('rows', [])
-                    if node_list:
-                        partial_result = {get_public_ip(node): node.get('data', {}) for node in node_list
-                                          if get_public_ip(node) and IP(get_public_ip(node)).iptype() != 'PRIVATE'}
-                        result.update(partial_result)
-                    break
-                except ChefServerError:
-                    if retry == 4:
-                        self.logger.exception("Chef API failed after 5 retries: POST /search/node")
-                    time.sleep(5)
-        return result
+
+        node_list = ChefClient(self.api, self.plugin_name).search_chef_hosts(requested_node_attributes)
+        return {get_public_ip(node): node for node in node_list
+                if get_public_ip(node) and IP(get_public_ip(node)).iptype() != 'PRIVATE'}
 
     def do_run(self):
         def _create_alert(plugin_name, alert_id, details):
