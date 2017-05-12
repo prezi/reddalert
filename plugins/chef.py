@@ -4,13 +4,10 @@ from __future__ import absolute_import
 
 import logging
 import re
-import time
-import urllib
-import json
 
 from IPy import IP
 from chef import ChefAPI
-from chef.exceptions import ChefServerError
+
 from api.chefclient import ChefClient
 
 

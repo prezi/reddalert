@@ -1,16 +1,15 @@
 #!/usr/bin/env python
 
 from __future__ import absolute_import
-import logging
+
 import hashlib
+import logging
 import re
 import urllib2
-from chef import Search, ChefAPI
 from multiprocessing import Pool
+
 from IPy import IP
-from functools import partial
-from chef.exceptions import ChefServerError
-import time
+from chef import ChefAPI
 
 from api.chefclient import ChefClient
 
@@ -133,9 +132,10 @@ class Route53Unknown:
 
         nodes = ChefClient(self.chef_api, self.plugin_name).search_chef_hosts(requested_node_attributes)
 
-
-        cloud_ips = [node.get("cloud_public_ips", []) for node in nodes]
-        phy_ifaces = sum([node.get("network_interfaces", {}).values() for node in nodes], [])
+        cloud_ips = [node.get("cloud_public_ips", []) for node in nodes if node.get("cloud_public_ips")]
+        network_interface_list = [node.get("network_interfaces", {}).values() for node in nodes
+                                  if node.get('network_interfaces')]
+        phy_ifaces = sum(network_interface_list, [])
         phy_ips = [i.get("addresses", {}).keys() for i in phy_ifaces]
         self.logger.debug("Loading public IP list from AWS")
         aws_machines = self.edda_client.soft_clean().query("/api/v2/view/instances;_expand")
