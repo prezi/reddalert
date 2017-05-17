@@ -2,14 +2,10 @@
 import json
 import time
 import calendar
-import argparse
-import logging
 import sys
 
 from lockfile import LockFile, LockTimeout
-
-from api import EddaClient, Coordinator, Alerter
-from plugins import plugin_list
+from sentry_processors import RemoveLockProcessor
 
 
 class Reddalert:
@@ -111,16 +107,17 @@ if __name__ == '__main__':
         from raven import Client
         from raven.handlers.logging import SentryHandler
 
-
         client = Client(args.sentry)
+        client.processors += ('sentry_processors.RemoveLockProcessor', )
+
         handler = SentryHandler(client)
         handler.setLevel(logging.ERROR)
         root_logger.addHandler(handler)
 
     try:
-        lock_handler = LockFile(args.statusfile)
-        lock_handler.acquire(timeout=3)
-        root_logger.debug("Lock file not found, creating %s.lock" % lock_handler.path)
+        RemoveLockProcessor.lock_file = LockFile(args.statusfile)
+        RemoveLockProcessor.lock_file.acquire(timeout=3)
+        root_logger.debug("Lock file not found, creating %s.lock" % RemoveLockProcessor.lock_file.path)
     except LockTimeout as e:
         root_logger.critical('Locked, script running... exiting.')
         sys.exit()
@@ -157,4 +154,5 @@ if __name__ == '__main__':
     Reddalert.save_json(args.statusfile, status, root_logger)
 
     root_logger.info("Reddalert finished successfully.")
-    lock_handler.release()
+    if RemoveLockProcessor.lock_file:
+        RemoveLockProcessor.lock_file.release()
