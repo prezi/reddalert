@@ -4,12 +4,11 @@ import socket
 
 
 class SecurityGroupPlugin:
-
     def __init__(self):
         self.plugin_name = 'secgroups'
         self.allowed_protocols = ["icmp"]
         self.allowed_ports = []
-        self.suspicious_range = "0.0.0.0/0"
+        self.whitelisted_ips = []
 
     def init(self, edda_client, config, status):
         self.edda_client = edda_client
@@ -18,6 +17,8 @@ class SecurityGroupPlugin:
             self.allowed_protocols = config["allowed_protocols"]
         if "allowed_ports" in config:
             self.allowed_ports = config["allowed_ports"]
+        if "whitelisted_ips" in config:
+            self.whitelisted_ips = config["whitelisted_ips"]
 
     def run(self):
         return list(self.do_run())
@@ -46,14 +47,20 @@ class SecurityGroupPlugin:
             if self.is_suspicious(perm):
                 yield perm
 
+    def is_suspicious_ip_range(self, ip_range):
+        # TODO: handle subsets of IP ranges as well
+        return ip_range not in self.whitelisted_ips
+
     def is_suspicious(self, perm):
         # fromPort and toPort defines a range for incoming connections
         # note: fromPort is not the peer's src port
         proto_ok = "ipProtocol" in perm and perm["ipProtocol"] in self.allowed_protocols
-        iprange_nok = "ipRanges" in perm and self.suspicious_range in perm["ipRanges"]
+        iprange_nok = "ipRanges" in perm and any(
+            [self.is_suspicious_ip_range(ip_range) for ip_range in perm["ipRanges"]])
         if (not proto_ok) and iprange_nok:
             f = int(perm["fromPort"] if "fromPort" in perm and perm["fromPort"] is not None else -1)
             t = int(perm["toPort"] if "toPort" in perm and perm["toPort"] is not None else 65536)
+            # allowing port range is considered to be suspicious
             return f != t or f not in self.allowed_ports
         return False
 

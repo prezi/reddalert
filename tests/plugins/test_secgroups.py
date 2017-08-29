@@ -1,17 +1,16 @@
 #!/usr/bin/env python
 import socket
 import unittest
-from mock import patch, Mock, call
 
+from mock import patch, Mock, call
 from plugins import SecurityGroupPlugin
 
 
 class PluginSecurityGroupTestCase(unittest.TestCase):
-
     def setUp(self):
         self.plugin = SecurityGroupPlugin()
         self.assertEqual(self.plugin.plugin_name, 'secgroups')
-        self.config = {'allowed_ports': [22]}
+        self.config = {'allowed_ports': [22], 'whitelisted_ips': ['1.2.3.4/24', '2.2.2.2/32']}
 
     def test_is_suspicious(self):
         self.plugin.init(Mock(), self.config, {})
@@ -21,20 +20,22 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
         self.assertTrue(self.plugin.is_suspicious(
             {"fromPort": 25, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort": 25}))
         self.assertTrue(self.plugin.is_suspicious(
-            {"fromPort": 21, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort": 22}))
+            {"fromPort": 21, "ipProtocol": "tcp", "ipRanges": ["6.6.6.6/32"], "toPort": 22}))
+        self.assertTrue(self.plugin.is_suspicious(
+            {"fromPort": 80, "ipProtocol": "tcp", "ipRanges": ["6.6.6.6/32"], "toPort": 80}))
 
         self.assertFalse(self.plugin.is_suspicious(
             {"fromPort": 0, "ipProtocol": "icmp", "ipRanges": ["0.0.0.0/0"], "toPort": -1}))
         self.assertFalse(self.plugin.is_suspicious(
             {"fromPort": 8, "ipProtocol": "icmp", "ipRanges": ["0.0.0.0/0"], "toPort": -1}))
         self.assertFalse(self.plugin.is_suspicious(
-            {"fromPort": 22, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort": 22},))
+            {"fromPort": 22, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort": 22}, ))
         self.assertFalse(self.plugin.is_suspicious(
-            {"fromPort": 25, "ipProtocol": "icmp", "ipRanges": ["0.0.0.0/0"], "toPort": 26},))
+            {"fromPort": 25, "ipProtocol": "icmp", "ipRanges": ["0.0.0.0/0"], "toPort": 26}, ))
         self.assertFalse(self.plugin.is_suspicious(
-            {"fromPort": 21, "ipProtocol": "tcp", "ipRanges": ["10.0.0.0/0"], "toPort": 22}))
+            {"fromPort": 80, "ipProtocol": "tcp", "ipRanges": ["2.2.2.2/32"], "toPort": 80}))
         self.assertFalse(self.plugin.is_suspicious(
-            {"fromPort": None, "ipProtocol": "-1", "ipRanges": ["20.0.0.0/0"], "toPort": None}))
+            {"fromPort": None, "ipProtocol": "-1", "ipRanges": ["1.2.3.4/24", "2.2.2.2/32"], "toPort": None}))
 
     def test_is_port_open(self, *mocks):
         self.plugin.init(Mock(), self.config, {})
@@ -64,15 +65,14 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
 
     @patch('plugins.SecurityGroupPlugin.is_port_open', return_value=True)
     def test_run(self, *mocks):
-
         eddaclient = Mock()
 
         def ret_list(args):
             return [{"groupId": "sg-1", "groupName": "group1", "ipPermissions": [
-                     {"fromPort": 22, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort":22},
-                     {"fromPort": 0, "ipProtocol": "icmp", "ipRanges": ["0.0.0.0/0"], "toPort": -1}]},
+                {"fromPort": 22, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort": 22},
+                {"fromPort": 0, "ipProtocol": "icmp", "ipRanges": ["0.0.0.0/0"], "toPort": -1}]},
                     {"groupId": "sg-2", "groupName": "group2", "ipPermissions": [
-                     {"fromPort": 139, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort":139}]},
+                        {"fromPort": 139, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort": 139}]},
                     {"groupId": "sg-3", "groupName": "empty group"}
                     ]
 
@@ -82,8 +82,8 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
                     [{"groupId": "sg-1", "groupName": "group1"}]},
                 {'imageId': 'ami-1', 'instanceId': 'b', 'publicIpAddress': '2.1.1.1', "tags": [
                     {"key": "Name", "value": "tag1"}], 'securityGroups': [
-                 {"groupId": "sg-2", "groupName": "group2"},
-                 {"groupId": "sg-1", "groupName": "group1"}]},
+                    {"groupId": "sg-2", "groupName": "group2"},
+                    {"groupId": "sg-1", "groupName": "group1"}]},
                 {'imageId': 'ami-2', 'instanceId': 'c', 'publicIpAddress':
                     '3.1.1.1', "tags": [], 'securityGroups': []},
                 {'imageId': 'ami-3', 'instanceId': 'd', 'publicIpAddress': '4.1.1.1', "tags": [], 'securityGroups':
@@ -99,7 +99,8 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
 
         # run the tested method
         self.assertEqual(self.plugin.run(), [{'id': 'sg-2 (group2)', 'plugin_name': 'secgroups', 'details': [
-                         {'fromPort': 139, 'ipRanges': ['0.0.0.0/0'], 'toPort': 139, 'ipProtocol': 'tcp', 'port_open': True, 'machines': ['b (2.1.1.1): tag1']}]}])
+            {'fromPort': 139, 'ipRanges': ['0.0.0.0/0'], 'toPort': 139, 'ipProtocol': 'tcp', 'port_open': True,
+             'machines': ['b (2.1.1.1): tag1']}]}])
 
         m1.query.assert_has_calls([call('/api/v2/aws/securityGroups;_expand')])
         eddaclient.query.assert_has_calls([call('/api/v2/view/instances;_expand')])
@@ -107,6 +108,7 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
 
 def main():
     unittest.main()
+
 
 if __name__ == '__main__':
     main()

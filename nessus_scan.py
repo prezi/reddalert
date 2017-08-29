@@ -112,8 +112,7 @@ if __name__ == '__main__':
 
         target_ip = enriched_instance.get("privateIpAddress", enriched_instance.get("publicIpAddress"))
         open_ports = enriched_instance.get("open_ports", [])
-        target_ports = [int(p.get("port")) for p in open_ports if
-                        p.get("range") == "0.0.0.0/0" and int(p.get("port") or 0) > 0]
+        target_ports = [int(p.get("port")) for p in open_ports if int(p.get("port", 0)) > 0]
         target_ports.sort()
 
         if target_ip and target_ports:
