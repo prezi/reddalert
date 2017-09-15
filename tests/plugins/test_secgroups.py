@@ -105,6 +105,14 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
         m1.query.assert_has_calls([call('/api/v2/aws/securityGroups;_expand')])
         eddaclient.query.assert_has_calls([call('/api/v2/view/instances;_expand')])
 
+    def test_whitelist_ip_config(self):
+        test_config = {"whitelisted_ips": ["^ just a comment", "192.168.0.1", "1.2.3.4/32", "8.8.8.8/24"]}
+        plugin = SecurityGroupPlugin()
+        plugin.init(edda_client=None, status=None, config=test_config)
+        self.assertIn("192.168.0.1/32", plugin.whitelisted_ips)
+        self.assertIn("1.2.3.4/32", plugin.whitelisted_ips)
+        self.assertIn("8.8.8.8/24", plugin.whitelisted_ips)
+
 
 def main():
     unittest.main()

@@ -19,6 +19,9 @@ class SecurityGroupPlugin:
             self.allowed_ports = config["allowed_ports"]
         if "whitelisted_ips" in config:
             self.whitelisted_ips = config["whitelisted_ips"]
+            for i, ip in enumerate(self.whitelisted_ips):
+                if '/' not in ip:
+                    self.whitelisted_ips[i] = '{ip}/32'.format(ip=ip)
 
     def run(self):
         return list(self.do_run())
