@@ -41,15 +41,23 @@ class S3AclPlugin:
         buckets = self.filter_excluded_buckets(conn.get_all_buckets())
 
         for b in self.sample_population(buckets):
+            bucket_alerts = self.suspicious_bucket_grants(b)
+            if bucket_alerts:
+                yield {
+                    "plugin_name": self.plugin_name,
+                    "id": "%s" % (b.name),
+                    "url": "https://s3.amazonaws.com/%s" % (b.name),
+                    "details": bucket_alerts
+                }
             keys = self.filter_excluded_keys(self.traverse_bucket(b, ""))
             for k in keys:
-                alerts = self.suspicious_grants(k)
-                if alerts:
+                object_alerts = self.suspicious_object_grants(k)
+                if object_alerts:
                     yield {
                         "plugin_name": self.plugin_name,
                         "id": "%s:%s" % (k.bucket.name, k.name),
                         "url": "https://s3.amazonaws.com/%s/%s" % (k.bucket.name, k.name),
-                        "details": alerts
+                        "details": object_alerts
                     }
 
     def filter_excluded_buckets(self, buckets):
@@ -80,19 +88,30 @@ class S3AclPlugin:
         k = int(min(max(1, self.maxdir - offset), max(1, pnl * self.p)))
         return [] if pnl == 0 else random.sample(population, k)
 
-    def suspicious_grants(self, key):
+    def suspicious_grants(self, acp, bucket_name):
+        grants = acp.acl.grants if acp is not None else []
+        allowed = list(self.allowed)
+
+        if bucket_name in self.allowed_specific:
+            allowed.extend(self.allowed_specific[bucket_name])
+
+        return ["%s %s" % (g.id or 'Everyone', g.permission) for g in grants if self.is_suspicious(g, allowed)]
+
+    def suspicious_object_grants(self, key):
         try:
             acp = key.get_acl()
-            grants = acp.acl.grants if acp is not None else []
-            allowed = list(self.allowed)
-
-            if key.bucket.name in self.allowed_specific:
-                allowed.extend(self.allowed_specific[key.bucket.name])
-
-            return ["%s %s" % (g.id or 'Everyone', g.permission) for g in grants if self.is_suspicious(g, allowed)]
+            return self.suspicious_grants(acp, key.bucket.name)
         except S3ResponseError as e:
             if e.error_code != 'NoSuchKey':
                 self.logger.exception("ACL fetching error: %s %s %s", key.name, e.message, e.error_code)
+            return []
+
+    def suspicious_bucket_grants(self, bucket):
+        try:
+            acp = bucket.get_acl()
+            return self.suspicious_grants(acp, bucket.name)
+        except S3ResponseError as e:
+            self.logger.exception("ACL fetching error: %s %s %s", bucket.name, e.message, e.error_code)
             return []
 
     def is_suspicious(self, grant, allowed):

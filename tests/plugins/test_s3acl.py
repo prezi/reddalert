@@ -31,7 +31,7 @@ class PluginS3AclTestCase(unittest.TestCase):
         self.plugin.p = 30
         self.assertEqual(self.plugin.sample_population(self.buckets, 3), ["bucket1", "bucket2"])
 
-    def test_suspicious_grants(self, *mocks):
+    def test_suspicious_object_grants(self, *mocks):
         with patch('boto.s3.key.Key') as MockClass:
             key = MockClass.return_value
             key.bucket.name = 'allowed_bucket'
@@ -46,7 +46,20 @@ class PluginS3AclTestCase(unittest.TestCase):
             key.get_acl = Mock(return_value=acp)
             self.plugin.init(Mock(), {'user': 'bob', 'key': 'xxx', 'allowed_specific': {
                              'allowed_bucket': [{'uid': 'id2', 'op': 'permission2'}]}}, {})
-            self.assertEqual(self.plugin.suspicious_grants(key), ['id permission'])
+            self.assertEqual(self.plugin.suspicious_object_grants(key), ['id permission'])
+
+    def test_suspicious_bucket_grants(self, *mocks):
+        bucket = MagicMock(
+            get_acl=MagicMock(
+                return_value=MagicMock(acl=MagicMock(grants=[MagicMock(id='id', permission='permission'),
+                                                             MagicMock(id='id2', permission='permission2')]))
+            )
+        )
+        bucket.name = 'allowed_bucket'
+
+        self.plugin.init(Mock(), {'user': 'bob', 'key': 'xxx', 'allowed_specific': {
+                         'allowed_bucket': [{'uid': 'id2', 'op': 'permission2'}]}}, {})
+        self.assertEqual(self.plugin.suspicious_bucket_grants(bucket), ['id permission'])
 
     def test_traverse_bucket(self, *mocks):
 
@@ -95,14 +108,18 @@ class PluginS3AclTestCase(unittest.TestCase):
                 return ['id permission']
             return []
 
-        with patch('plugins.S3AclPlugin.traverse_bucket', return_value=[key1, key2]) as MockClass:
-            with patch('plugins.S3AclPlugin.suspicious_grants', side_effect=ret_keys):
+        def ret_buckets(key):
+            return []
 
-                self.plugin.init(Mock(), {'user': 'bob', 'key': 'xxx'}, {})
-                # run the tested method
-                self.assertEqual(list(self.plugin.do_run(MagicMock())), [
-                                 {'details': ['id permission'], 'id': 'bucket1:key1',
-                                  'url': 'https://s3.amazonaws.com/bucket1/key1', 'plugin_name': 's3acl'}])
+        with patch('plugins.S3AclPlugin.traverse_bucket', return_value=[key1, key2]) as MockClass,\
+             patch('plugins.S3AclPlugin.suspicious_object_grants', side_effect=ret_keys),\
+             patch('plugins.S3AclPlugin.suspicious_bucket_grants', side_effect=ret_buckets):
+
+            self.plugin.init(Mock(), {'user': 'bob', 'key': 'xxx'}, {})
+            # run the tested method
+            self.assertEqual(list(self.plugin.do_run(MagicMock())), [
+                             {'details': ['id permission'], 'id': 'bucket1:key1',
+                              'url': 'https://s3.amazonaws.com/bucket1/key1', 'plugin_name': 's3acl'}])
 
     def test_survive_s3error_traverse(self):
         bucket = Mock()
@@ -118,7 +135,7 @@ class PluginS3AclTestCase(unittest.TestCase):
         k.get_acl = Mock(side_effect=S3ResponseError(404, 'Not found', ''))
         self.plugin.init(Mock(), {'user': 'bob', 'key': 'xxx'}, {})
 
-        r = self.plugin.suspicious_grants(k)
+        r = self.plugin.suspicious_object_grants(k)
 
         self.assertEqual([], r)
 
