@@ -95,7 +95,7 @@ class S3AclPlugin:
         if bucket_name in self.allowed_specific:
             allowed.extend(self.allowed_specific[bucket_name])
 
-        return ["%s %s" % (g.id or 'Everyone', g.permission) for g in grants if self.is_suspicious(g, allowed)]
+        return ["%s %s" % (g.id or g.uri or 'Everyone', g.permission) for g in grants if self.is_suspicious(g, allowed)]
 
     def suspicious_object_grants(self, key):
         try:
