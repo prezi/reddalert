@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import socket
+import string
 
 
 class SecurityGroupPlugin:
@@ -33,9 +34,13 @@ class SecurityGroupPlugin:
             perms = list(self.suspicious_perms(group["ipPermissions"])) if "ipPermissions" in group else []
             if perms:
                 affected_machines = self.machines_with_group(machines, group["groupId"])
+                aws_region = '' if not affected_machines else affected_machines[0]['placement']['availabilityZone']
+                aws_region = aws_region.rstrip(string.ascii_lowercase)
                 yield {
                     "plugin_name": self.plugin_name,
                     "id": '%s (%s)' % (group["groupId"], group["groupName"]),
+                    "awsRegion": aws_region,
+                    'awsAccount': group['ownerId'],
                     "details": list(self.create_details(perms, affected_machines))
                 }
 

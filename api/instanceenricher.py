@@ -1,4 +1,5 @@
 import operator
+import string
 
 
 class InstanceEnricher:
@@ -61,6 +62,10 @@ def instance_report(instance, extra={}):
     # convert list of tags to a more readable dict
     tags = {tag['key']: tag['value'] for tag in instance.get('tags', []) if 'key' in tag and 'value' in tag}
 
+    arn = instance.get('iamInstanceProfile', {}).get('arn')
+    account_id = arn.split(':')[4] if arn else None
+    # edda does not provide account id for nodes without instance profiles
+
     result = {
         "instanceId": instance.get("instanceId", None),
         'tags': tags,
@@ -70,7 +75,9 @@ def instance_report(instance, extra={}):
         "elbs": instance.get("elbs", []),
         "open_ports": reduce(operator.add, [sg["rules"] for sg in instance.get("securityGroups", [])], []),
         "publicIpAddress": instance.get("publicIpAddress", None),
-        "privateIpAddress": instance.get("privateIpAddress", None)
+        "privateIpAddress": instance.get("privateIpAddress", None),
+        "awsRegion": instance.get('placement', {}).get('availabilityZone', '').rstrip(string.ascii_lowercase),
+        "awsAccount": account_id
     }
     result.update(extra)
     return result
