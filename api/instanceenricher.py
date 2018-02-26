@@ -62,9 +62,12 @@ def instance_report(instance, extra={}):
     # convert list of tags to a more readable dict
     tags = {tag['key']: tag['value'] for tag in instance.get('tags', []) if 'key' in tag and 'value' in tag}
 
-    arn = instance.get('iamInstanceProfile', {}).get('arn')
-    account_id = arn.split(':')[4] if arn else None
-    # edda does not provide account id for nodes without instance profiles
+    if 'iamInstanceProfile' in instance and instance['iamInstanceProfile']:
+        arn = instance.get('iamInstanceProfile').get('arn')
+        account_id = arn.split(':')[4] if arn else None
+    else:
+        # edda does not provide account id for nodes without instance profiles
+        account_id = None
 
     result = {
         "instanceId": instance.get("instanceId", None),
