@@ -48,6 +48,40 @@ class PluginS3AclTestCase(unittest.TestCase):
                              'allowed_bucket': [{'uid': 'id2', 'op': 'permission2'}]}}, {})
             self.assertEqual(self.plugin.suspicious_object_grants(key), ['id permission'])
 
+    def test_is_suspicious_object(self, *mocks):
+        is_suspicious = self.plugin.is_suspicious
+
+        mock_user_whitelist = {'uid': 'mock_user', 'op': 'FULL_ACCESS'}
+        mock_group_whitelist = {'gid': 'aws/mock_group', 'op': 'FULL_ACCESS'}
+        mock_user_group_whitelist = {'uid': 'mock_user', 'gid': 'aws/mock_group', 'op': 'FULL_ACCESS'}
+
+        mock_grant = Mock(type='Group', id=None, uri='aws/mock_group', permission='FULL_ACCESS')
+        self.assertTrue(is_suspicious(mock_grant, []))
+        self.assertFalse(is_suspicious(mock_grant, [mock_group_whitelist]))
+        self.assertFalse(is_suspicious(mock_grant, [mock_user_group_whitelist]))
+
+        mock_grant = Mock(type='Group', id=None, uri='aws/different_group', permission='FULL_ACCESS')
+        self.assertTrue(is_suspicious(mock_grant, []))
+        self.assertTrue(is_suspicious(mock_grant, [mock_group_whitelist]))
+        self.assertTrue(is_suspicious(mock_grant, [mock_user_group_whitelist]))
+
+        mock_grant = Mock(type='CanonicalUser', id='mock_user', uri=None, permission='FULL_ACCESS')
+        self.assertTrue(is_suspicious(mock_grant, []))
+        self.assertFalse(is_suspicious(mock_grant, [mock_user_whitelist]))
+        self.assertFalse(is_suspicious(mock_grant, [mock_user_group_whitelist]))
+
+        mock_grant = Mock(type='CanonicalUser', id='different_user', uri=None, permission='FULL_ACCESS')
+        self.assertTrue(is_suspicious(mock_grant, []))
+        self.assertTrue(is_suspicious(mock_grant, [mock_user_whitelist]))
+        self.assertTrue(is_suspicious(mock_grant, [mock_user_group_whitelist]))
+
+        mock_grant = Mock(type='CanonicalUser', id='whatever_user', uri=None, permission='FULL_ACCESS')
+        self.assertRaises(KeyError, is_suspicious, mock_grant, [{}])
+        self.assertTrue(is_suspicious(mock_grant, [{'op': 'whatever_no_gid_or_uid'}]))
+
+        mock_grant = Mock(type='UnknownType', id=None, uri=None, permission='FULL_ACCESS')
+        self.assertTrue(is_suspicious(mock_grant, [{'op': 'whatever_op', 'uid': 'whatever_uid', 'gid': 'whatever_gid'}]))
+
     def test_suspicious_bucket_grants(self, *mocks):
         bucket = MagicMock(
             get_acl=MagicMock(

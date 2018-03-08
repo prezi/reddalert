@@ -115,6 +115,23 @@ class S3AclPlugin:
             return []
 
     def is_suspicious(self, grant, allowed):
-        uid = grant.id if grant.id is not None else '*'
-        op = grant.permission
-        return not any(a['uid'] == uid and a['op'] == op for a in allowed)
+        actual_op = grant.permission
+        if grant.type == u'Group':
+            actual_group_id = grant.uri
+            actual_user_id = None
+        else:
+            actual_group_id = None
+            actual_user_id = grant.id if grant.id is not None else '*'
+
+        for allowed_rule in allowed:
+            allowed_user_id = allowed_rule.get('uid')
+            allowed_group_id = allowed_rule.get('gid')
+            allowed_op = allowed_rule['op']
+
+            is_allowed_user = (False if actual_user_id is None else actual_user_id == allowed_user_id)
+            is_allowed_group = (False if actual_group_id is None else actual_group_id == allowed_group_id)
+            is_allowed_op = (actual_op == allowed_op)
+
+            if is_allowed_op and (is_allowed_user or is_allowed_group):
+                return False
+        return True
