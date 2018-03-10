@@ -34,14 +34,16 @@ class SecurityGroupPlugin:
             perms = list(self.suspicious_perms(group["ipPermissions"])) if "ipPermissions" in group else []
             if perms:
                 affected_machines = self.machines_with_group(machines, group["groupId"])
-                aws_region = '' if not affected_machines else affected_machines[0]['placement']['availabilityZone']
-                aws_region = aws_region.rstrip(string.ascii_lowercase)
+
+                aws_availability_zone = '' if not affected_machines else affected_machines[0]['placement']['availabilityZone']
+                aws_region = aws_availability_zone.rstrip(string.ascii_lowercase)
+                aws_account = group['ownerId']
                 yield {
                     "plugin_name": self.plugin_name,
                     "id": '%s (%s)' % (group["groupId"], group["groupName"]),
-                    "awsRegion": aws_region,
-                    'awsAccount': group['ownerId'],
-                    "details": list(self.create_details(perms, affected_machines))
+                    "details": list(self.create_details(perms, affected_machines,
+                                                        aws_region=aws_region,
+                                                        aws_account=aws_account))
                 }
 
     def machines_with_group(self, machines, groupId):
@@ -72,7 +74,7 @@ class SecurityGroupPlugin:
             return f != t or f not in self.allowed_ports
         return False
 
-    def create_details(self, perms, machines):
+    def create_details(self, perms, machines, aws_region='', aws_account=''):
         for perm in perms:
             mproc = [(m["instanceId"], m["publicIpAddress"], ",".join([t["value"] for t in m["tags"]]))
                      for m in machines]
@@ -82,7 +84,9 @@ class SecurityGroupPlugin:
                 'fromPort': perm['fromPort'],
                 'ipRanges': perm['ipRanges'],
                 'toPort': perm['toPort'],
-                'ipProtocol': perm['ipProtocol']
+                'ipProtocol': perm['ipProtocol'],
+                'awsRegion': aws_region,
+                'awsAccount': aws_account
             }
 
     def is_port_open(self, host, port_from, port_to):

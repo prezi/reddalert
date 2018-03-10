@@ -114,10 +114,10 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
 
         # run the tested method
         self.assertEqual(self.plugin.run(), [{
-            'id': 'sg-2 (group2)', 'plugin_name': 'secgroups', 'awsAccount': '222222', 'awsRegion': 'us-east-2',
+            'id': 'sg-2 (group2)', 'plugin_name': 'secgroups',
             'details': [{
                 'fromPort': 139, 'ipRanges': ['0.0.0.0/0'], 'toPort': 139, 'ipProtocol': 'tcp', 'port_open': True,
-                'machines': ['b (2.1.1.1): tag1']
+                'awsAccount': '222222', 'awsRegion': 'us-east-2', 'machines': ['b (2.1.1.1): tag1']
             }]
         }])
 
