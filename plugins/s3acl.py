@@ -10,8 +10,9 @@ from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 
 
-boto.config.add_section('Boto')
-boto.config.set('Boto', 'http_socket_timeout', '10')
+if not boto.config.has_section('Boto'):
+    boto.config.add_section('Boto')
+    boto.config.set('Boto', 'http_socket_timeout', '10')
 
 
 class S3AclPlugin:
@@ -23,7 +24,7 @@ class S3AclPlugin:
     def init(self, edda_client, config, status):
         self.config = config
         self.edda_client = edda_client
-        self.conn = S3Connection(config['user'], config['key'])
+        self.conn = S3Connection(self.config['user'], self.config['key'], calling_format='boto.s3.connection.ProtocolIndependentOrdinaryCallingFormat')
         self.p = config['visit_probability'] if 'visit_probability' in config else 0.1
         self.maxdir = config['visit_max'] if 'visit_max' in config else 5
         self.excluded_buckets = self.init_cache_from_list_in_config('excluded_buckets')
@@ -37,8 +38,26 @@ class S3AclPlugin:
     def run(self):
         return list(self.do_run(self.conn))
 
+    def get_region_aware_buckets(self, buckets):
+        for bucket in buckets:
+            try:
+                location = bucket.get_location()
+                if not location:
+                    location = 'us-east-1'
+                elif location == 'EU':
+                    location = 'eu-west-1'
+                conn = boto.s3.connect_to_region(location,
+                                                 aws_access_key_id=self.config['user'],
+                                                 aws_secret_access_key=self.config['key'],
+                                                 calling_format='boto.s3.connection.ProtocolIndependentOrdinaryCallingFormat')
+
+                yield conn.get_bucket(bucket.name)
+            except S3ResponseError as e:
+                if e.status != 404:
+                    self.logger.exception("Failed to get bucket location for %s", bucket.name)
+
     def do_run(self, conn):
-        buckets = self.filter_excluded_buckets(conn.get_all_buckets())
+        buckets = list(self.filter_excluded_buckets(self.get_region_aware_buckets(conn.get_all_buckets())))
 
         for b in self.sample_population(buckets):
             bucket_alerts = self.suspicious_bucket_grants(b)
