@@ -71,12 +71,12 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
             return [
                 {"groupId": "sg-1", "groupName": "group1", "ownerId": "111111",
                  "ipPermissions": [
-                    {"fromPort": 22, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort": 22},
-                    {"fromPort": 0, "ipProtocol": "icmp", "ipRanges": ["0.0.0.0/0"], "toPort": -1}
+                     {"fromPort": 22, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort": 22},
+                     {"fromPort": 0, "ipProtocol": "icmp", "ipRanges": ["0.0.0.0/0"], "toPort": -1}
                  ]},
                 {"groupId": "sg-2", "groupName": "group2", "ownerId": "222222",
                  "ipPermissions": [
-                    {"fromPort": 139, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort": 139}
+                     {"fromPort": 139, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort": 139}
                  ]},
                 {"groupId": "sg-3", "groupName": "empty group", "ownerId": "333333"}
             ]
