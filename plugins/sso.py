@@ -84,16 +84,20 @@ class SSOUnprotected(BaseClass):
         if 'redirects' not in self.status:
             self.status['redirects'] = []
 
+    def get_successful_responses(self, responses):
+        return {url: urllib.unquote(response['headers'].get('location', ''))
+                for url, response in responses.iteritems()
+                if not response['code'] >= 400}
+
     def run(self):
         responses = self.get_all_my_domains_response()
-        redirects = {url: urllib.unquote(response['headers'].get('location', ''))
-                     for url, response in responses.iteritems()}
+        redirects = self.get_successful_responses(responses)
 
         old_redirects = self.status.get("redirects", {})
         alerts = {
             loc: redirect_url for loc, redirect_url in redirects.iteritems()
             if loc not in old_redirects or old_redirects[loc] != redirect_url
-            }
+        }
         self.status["redirects"] = redirects
         for tested_url, location_header in alerts.iteritems():
             tested_url_domain_re = self.VALID_URL_RE.match(tested_url)
@@ -102,7 +106,6 @@ class SSOUnprotected(BaseClass):
                 self.logger.error('Invalid tested URL or location header: %s %s', tested_url, location_header)
             else:
                 tested_domain = tested_url_domain_re.group(1)
-                print 'tested_domain', tested_domain, location_header
                 godauth_match = self.GODAUTH_URL.match(location_header)
                 sso_match = self.SSO_URL.match(location_header)
 

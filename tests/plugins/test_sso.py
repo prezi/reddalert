@@ -139,6 +139,17 @@ class PluginSsoTestCase(unittest.TestCase):
 
         m.query.assert_has_calls([call('/api/v2/aws/hostedRecords;_expand')])
 
+    def test_get_successful_responses(self):
+        responses = {
+            'foo.prezi.com': {'code': 301, 'headers': {'location': 'bar'}},
+            'bar.prezi.com': {'code': 401, 'headers': {}},
+            'non-working.prezi.com': {'code': 500, 'headers': {}},
+        }
+
+        result = self.plugin.get_successful_responses(responses)
+
+        self.assertEqual({'foo.prezi.com': 'bar'}, result)
+
 
 class PluginSecurityHeadersTestCase(unittest.TestCase):
     def setUp(self):
