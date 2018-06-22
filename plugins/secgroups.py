@@ -80,6 +80,7 @@ class SecurityGroupPlugin:
                      for m in machines]
             yield {
                 'port_open': len(mproc) > 0 and self.is_port_open(mproc[0][1], perm['fromPort'], perm['toPort']),
+                'ipAddresses': [m[1] for m in mproc if m],
                 'machines': ["%s (%s): %s" % m for m in mproc],
                 'fromPort': perm['fromPort'],
                 'ipRanges': perm['ipRanges'],

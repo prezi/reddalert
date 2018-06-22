@@ -117,7 +117,7 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
             'id': 'sg-2 (group2)', 'plugin_name': 'secgroups',
             'details': [{
                 'fromPort': 139, 'ipRanges': ['0.0.0.0/0'], 'toPort': 139, 'ipProtocol': 'tcp', 'port_open': True,
-                'awsAccount': '222222', 'awsRegion': 'us-east-2', 'machines': ['b (2.1.1.1): tag1']
+                'awsAccount': '222222', 'awsRegion': 'us-east-2', 'machines': ['b (2.1.1.1): tag1'], 'ipAddresses': ['2.1.1.1']
             }]
         }])
 
