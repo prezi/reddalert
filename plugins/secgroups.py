@@ -76,11 +76,11 @@ class SecurityGroupPlugin:
 
     def create_details(self, perms, machines, aws_region='', aws_account=''):
         for perm in perms:
-            mproc = [(m["instanceId"], m["publicIpAddress"], ",".join([t["value"] for t in m["tags"]]))
+            mproc = [(m["instanceId"], m["publicIpAddress"] or m["privateIpAddress"], ",".join([t["value"] for t in m["tags"]]))
                      for m in machines]
             yield {
                 'port_open': len(mproc) > 0 and self.is_port_open(mproc[0][1], perm['fromPort'], perm['toPort']),
-                'ipAddresses': [m[1] for m in mproc if m],
+                'ipAddresses': [m[1] for m in mproc if m[1]],
                 'machines': ["%s (%s): %s" % m for m in mproc],
                 'fromPort': perm['fromPort'],
                 'ipRanges': perm['ipRanges'],

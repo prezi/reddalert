@@ -78,7 +78,11 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
                  "ipPermissions": [
                      {"fromPort": 139, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort": 139}
                  ]},
-                {"groupId": "sg-3", "groupName": "empty group", "ownerId": "333333"}
+                {"groupId": "sg-3", "groupName": "empty group", "ownerId": "333333"},
+                {"groupId": "sg-6", "groupName": "group6", "ownerId": "444444",
+                 "ipPermissions": [
+                     {"fromPort": 445, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort": 445}
+                 ]}
             ]
 
         def ret_machines(args):
@@ -102,6 +106,14 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
                 {'imageId': 'ami-3', 'instanceId': 'd', 'publicIpAddress': '4.1.1.1', "tags": [],
                  'securityGroups': [{"groupId": "sg-4", "groupName": "group4"}],
                  'placement': {'availabilityZone': 'us-east-4d'}
+                 },
+                {'imageId': 'ami-4', 'instanceId': 'e', 'publicIpAddress': None, 'privateIpAddress': '192.168.0.1',
+                 "tags": [{"key": "Name", "value": "tag1"}],
+                 'securityGroups': [
+                     {"groupId": "sg-6", "groupName": "group6"},
+                     {"groupId": "sg-5", "groupName": "group5"}
+                 ],
+                 'placement': {'availabilityZone': 'us-east-2b'}
                  }
             ]
 
@@ -113,13 +125,24 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
         self.plugin.init(eddaclient, self.config, {})
 
         # run the tested method
-        self.assertEqual(self.plugin.run(), [{
-            'id': 'sg-2 (group2)', 'plugin_name': 'secgroups',
-            'details': [{
-                'fromPort': 139, 'ipRanges': ['0.0.0.0/0'], 'toPort': 139, 'ipProtocol': 'tcp', 'port_open': True,
-                'awsAccount': '222222', 'awsRegion': 'us-east-2', 'machines': ['b (2.1.1.1): tag1'], 'ipAddresses': ['2.1.1.1']
-            }]
-        }])
+        result = self.plugin.run()
+        print result
+        self.assertEqual(result, [
+            {
+                'id': 'sg-2 (group2)', 'plugin_name': 'secgroups',
+                'details': [{
+                    'fromPort': 139, 'ipRanges': ['0.0.0.0/0'], 'toPort': 139, 'ipProtocol': 'tcp', 'port_open': True,
+                    'awsAccount': '222222', 'awsRegion': 'us-east-2', 'machines': ['b (2.1.1.1): tag1'], 'ipAddresses': ['2.1.1.1']
+                }]
+            },
+            {
+                'id': 'sg-6 (group6)', 'plugin_name': 'secgroups',
+                'details': [{
+                    'fromPort': 445, 'ipRanges': ['0.0.0.0/0'], 'toPort': 445, 'ipProtocol': 'tcp', 'port_open': True,
+                    'awsAccount': '444444', 'awsRegion': 'us-east-2', 'machines': ['e (192.168.0.1): tag1'], 'ipAddresses': ['192.168.0.1']
+                }]
+            }
+        ])
 
         m1.query.assert_has_calls([call('/api/v2/aws/securityGroups;_expand')])
         eddaclient.query.assert_has_calls([call('/api/v2/view/instances;_expand')])
