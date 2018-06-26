@@ -1,7 +1,6 @@
 from api.instanceenricher import InstanceEnricher
 from reddalert import Reddalert
 
-
 if __name__ == '__main__':
     import argparse
     import logging
@@ -12,7 +11,6 @@ if __name__ == '__main__':
     import json
     import itertools
     from api import EddaClient
-
 
     parser = argparse.ArgumentParser(description='Runs tests against AWS configuration')
     parser.add_argument('--configfile', '-c', default='etc/configfile.json', help='Configuration file')
@@ -51,7 +49,6 @@ if __name__ == '__main__':
     if args.sentry:
         from raven import Client
         from raven.handlers.logging import SentryHandler
-
 
         client = Client(args.sentry)
         handler = SentryHandler(client)
@@ -112,7 +109,7 @@ if __name__ == '__main__':
 
         target_ip = enriched_instance.get("privateIpAddress", enriched_instance.get("publicIpAddress"))
         open_ports = enriched_instance.get("open_ports", [])
-        target_ports = [int(p.get("port")) for p in open_ports if int(p.get("port", 0)) > 0]
+        target_ports = list(set([int(p.get("port")) for p in open_ports if int(p.get("port", 0)) > 0]))
         target_ports.sort()
 
         if target_ip and target_ports:
@@ -126,7 +123,7 @@ if __name__ == '__main__':
         target_elbs = enriched_instance.get("elbs", []) or []
         for elb in target_elbs:
             target_host = elb.get("DNSName")
-            target_ports = elb.get("ports", [])
+            target_ports = list(set(elb.get("ports", [])))
             target_ports.sort(key=int)
             if target_host and target_ports:
                 messages_to_send.append({"type": "nessus_scan",
