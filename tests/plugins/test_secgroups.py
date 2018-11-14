@@ -2,6 +2,7 @@
 import socket
 import unittest
 
+from netaddr import IPNetwork
 from mock import patch, Mock, call
 from plugins import SecurityGroupPlugin
 
@@ -10,7 +11,7 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
     def setUp(self):
         self.plugin = SecurityGroupPlugin()
         self.assertEqual(self.plugin.plugin_name, 'secgroups')
-        self.config = {'allowed_ports': [22], 'whitelisted_ips': ['1.2.3.4/24', '2.2.2.2/32']}
+        self.config = {'allowed_ports': [22], 'whitelisted_ips': ['1.2.3.4/24', '2.2.2.2/32', '172.16.0.0/12']}
         self.example_security_group = {'groupId': 'sg-1', "groupName": "group1"}
 
     def test_is_suspicious(self):
@@ -76,6 +77,11 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
 
         suspicious_perms = [{'toPort': 139, 'fromPort': 139, 'ipRanges': ['0.0.0.0/0'], 'ipProtocol': 'tcp'}]
         self.assertListEqual(suspicious_perms, result)
+
+    def test_is_suspicious_ip_range(self):
+        self.plugin.init(Mock(), self.config, {})
+        self.assertFalse(self.plugin.is_suspicious_ip_range('172.16.0.0/16'))
+        self.assertTrue(self.plugin.is_suspicious_ip_range('172.16.0.0/0'))
 
     def test_is_port_open(self, *mocks):
         self.plugin.init(Mock(), self.config, {})
@@ -193,9 +199,9 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
         test_config = {"whitelisted_ips": ["^ just a comment", "192.168.0.1", "1.2.3.4/32", "8.8.8.8/24"]}
         plugin = SecurityGroupPlugin()
         plugin.init(edda_client=None, status=None, config=test_config)
-        self.assertIn("192.168.0.1/32", plugin.whitelisted_ips)
-        self.assertIn("1.2.3.4/32", plugin.whitelisted_ips)
-        self.assertIn("8.8.8.8/24", plugin.whitelisted_ips)
+        self.assertIn(IPNetwork("192.168.0.1/32"), plugin.whitelisted_ips)
+        self.assertIn(IPNetwork("1.2.3.4/32"), plugin.whitelisted_ips)
+        self.assertIn(IPNetwork("8.8.8.8/24"), plugin.whitelisted_ips)
 
 
 def main():

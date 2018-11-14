@@ -2,6 +2,7 @@
 
 import socket
 import string
+from netaddr import IPNetwork, AddrFormatError
 
 
 class SecurityGroupPlugin:
@@ -22,10 +23,14 @@ class SecurityGroupPlugin:
         if "whitelisted_entries" in config:
             self.whitelisted_entries = config["whitelisted_entries"]
         if "whitelisted_ips" in config:
-            self.whitelisted_ips = config["whitelisted_ips"]
-            for i, ip in enumerate(self.whitelisted_ips):
-                if '/' not in ip:
-                    self.whitelisted_ips[i] = '{ip}/32'.format(ip=ip)
+            self.whitelisted_ips = list(self.create_network_objects_from_valid_ips(config["whitelisted_ips"]))
+
+    def create_network_objects_from_valid_ips(self, ip_range_list):
+        for ip_range in ip_range_list:
+            try:
+                yield IPNetwork(ip_range)
+            except AddrFormatError:
+                pass
 
     def run(self):
         return list(self.do_run())
@@ -63,8 +68,7 @@ class SecurityGroupPlugin:
                 yield perm
 
     def is_suspicious_ip_range(self, ip_range):
-        # TODO: handle subsets of IP ranges as well
-        return ip_range not in self.whitelisted_ips
+        return not any([IPNetwork(ip_range) in allowed_range for allowed_range in self.whitelisted_ips])
 
     def is_suspicious_permission(self, perm):
         # fromPort and toPort defines a range for incoming connections
