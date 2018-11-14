@@ -11,31 +11,71 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
         self.plugin = SecurityGroupPlugin()
         self.assertEqual(self.plugin.plugin_name, 'secgroups')
         self.config = {'allowed_ports': [22], 'whitelisted_ips': ['1.2.3.4/24', '2.2.2.2/32']}
+        self.example_security_group = {'groupId': 'sg-1', "groupName": "group1"}
 
     def test_is_suspicious(self):
         self.plugin.init(Mock(), self.config, {})
 
-        self.assertTrue(self.plugin.is_suspicious(
+        self.assertTrue(self.plugin.is_suspicious_permission(
             {"fromPort": None, "ipProtocol": "-1", "ipRanges": ["0.0.0.0/0"], "toPort": None}))
-        self.assertTrue(self.plugin.is_suspicious(
+        self.assertTrue(self.plugin.is_suspicious_permission(
             {"fromPort": 25, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort": 25}))
-        self.assertTrue(self.plugin.is_suspicious(
+        self.assertTrue(self.plugin.is_suspicious_permission(
             {"fromPort": 21, "ipProtocol": "tcp", "ipRanges": ["6.6.6.6/32"], "toPort": 22}))
-        self.assertTrue(self.plugin.is_suspicious(
+        self.assertTrue(self.plugin.is_suspicious_permission(
             {"fromPort": 80, "ipProtocol": "tcp", "ipRanges": ["6.6.6.6/32"], "toPort": 80}))
 
-        self.assertFalse(self.plugin.is_suspicious(
+        self.assertFalse(self.plugin.is_suspicious_permission(
             {"fromPort": 0, "ipProtocol": "icmp", "ipRanges": ["0.0.0.0/0"], "toPort": -1}))
-        self.assertFalse(self.plugin.is_suspicious(
+        self.assertFalse(self.plugin.is_suspicious_permission(
             {"fromPort": 8, "ipProtocol": "icmp", "ipRanges": ["0.0.0.0/0"], "toPort": -1}))
-        self.assertFalse(self.plugin.is_suspicious(
+        self.assertFalse(self.plugin.is_suspicious_permission(
             {"fromPort": 22, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort": 22}, ))
-        self.assertFalse(self.plugin.is_suspicious(
+        self.assertFalse(self.plugin.is_suspicious_permission(
             {"fromPort": 25, "ipProtocol": "icmp", "ipRanges": ["0.0.0.0/0"], "toPort": 26}, ))
-        self.assertFalse(self.plugin.is_suspicious(
+        self.assertFalse(self.plugin.is_suspicious_permission(
             {"fromPort": 80, "ipProtocol": "tcp", "ipRanges": ["2.2.2.2/32"], "toPort": 80}))
-        self.assertFalse(self.plugin.is_suspicious(
+        self.assertFalse(self.plugin.is_suspicious_permission(
             {"fromPort": None, "ipProtocol": "-1", "ipRanges": ["1.2.3.4/24", "2.2.2.2/32"], "toPort": None}))
+
+    def test_is_whitelisted_perm_true(self):
+        self.plugin.init(Mock(), self.config, {})
+        self.plugin.whitelisted_entries = {'sg-1 (group1)': {'22': "2.2.2.2/32"}}
+        perm = {"fromPort": 22, "ipProtocol": "-1", "ipRanges": ["2.2.2.2/32"], "toPort": 22}
+        result = self.plugin.is_whitelisted_perm(self.example_security_group, perm)
+
+        self.assertTrue(result)
+
+    def test_is_whitelisted_perm_port_range(self):
+        self.plugin.init(Mock(), self.config, {})
+        self.plugin.whitelisted_entries = {'sg-1 (group1)': {'8000-9000': "2.2.2.2/32"}}
+        perm = {"fromPort": 8000, "ipProtocol": "-1", "ipRanges": ["2.2.2.2/32"], "toPort": 9000}
+        result = self.plugin.is_whitelisted_perm(self.example_security_group, perm)
+
+        self.assertTrue(result)
+
+    def test_is_whitelisted_perm_false(self):
+        self.plugin.init(Mock(), self.config, {})
+        self.plugin.whitelisted_entries = {'sg-1 (group1)': {'22': "2.2.2.2/32"}}
+        perm = {"fromPort": 22, "ipProtocol": "-1", "ipRanges": ["2.2.2.2/32", "1.1.1.1/32"], "toPort": 22}
+
+        result = self.plugin.is_whitelisted_perm(self.example_security_group, perm)
+
+        self.assertFalse(result)
+
+    def test_suspicious_perms(self):
+        self.plugin.init(Mock(), self.config, {})
+        self.plugin.whitelisted_entries = {'sg-2 (group2)': {'8000-9000': "2.2.2.2/32"}}
+        security_group = {"groupId": "sg-2", "groupName": "group2", "ownerId": "222222",
+                          "ipPermissions": [
+                              {"fromPort": 139, "ipProtocol": "tcp", "ipRanges": ["0.0.0.0/0"], "toPort": 139},
+                              {"fromPort": 8000, "ipProtocol": "tcp", "ipRanges": ["2.2.2.2/32"], "toPort": 9000}
+                          ]}
+
+        result = list(self.plugin.suspicious_perms(security_group))
+
+        suspicious_perms = [{'toPort': 139, 'fromPort': 139, 'ipRanges': ['0.0.0.0/0'], 'ipProtocol': 'tcp'}]
+        self.assertListEqual(suspicious_perms, result)
 
     def test_is_port_open(self, *mocks):
         self.plugin.init(Mock(), self.config, {})
@@ -126,20 +166,22 @@ class PluginSecurityGroupTestCase(unittest.TestCase):
 
         # run the tested method
         result = self.plugin.run()
-        print result
-        self.assertEqual(result, [
+        # print 'result', result
+        self.assertListEqual(result, [
             {
                 'id': 'sg-2 (group2)', 'plugin_name': 'secgroups',
                 'details': [{
                     'fromPort': 139, 'ipRanges': ['0.0.0.0/0'], 'toPort': 139, 'ipProtocol': 'tcp', 'port_open': True,
-                    'awsAccount': '222222', 'awsRegion': 'us-east-2', 'machines': ['b (2.1.1.1): tag1'], 'ipAddresses': ['2.1.1.1']
+                    'awsAccount': '222222', 'awsRegion': 'us-east-2', 'machines': ['b (2.1.1.1): tag1'],
+                    'ipAddresses': ['2.1.1.1']
                 }]
             },
             {
                 'id': 'sg-6 (group6)', 'plugin_name': 'secgroups',
                 'details': [{
                     'fromPort': 445, 'ipRanges': ['0.0.0.0/0'], 'toPort': 445, 'ipProtocol': 'tcp', 'port_open': True,
-                    'awsAccount': '444444', 'awsRegion': 'us-east-2', 'machines': ['e (192.168.0.1): tag1'], 'ipAddresses': ['192.168.0.1']
+                    'awsAccount': '444444', 'awsRegion': 'us-east-2', 'machines': ['e (192.168.0.1): tag1'],
+                    'ipAddresses': ['192.168.0.1']
                 }]
             }
         ])

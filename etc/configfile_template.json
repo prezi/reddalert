@@ -5,7 +5,9 @@
   "es_host": "localhost",
   "es_port": 9200,
   "email_from": "reddalert@localhost",
-  "email_to": ["root@localhost"],
+  "email_to": [
+    "root@localhost"
+  ],
   "email_subject": "[reddalert] Report",
   "plugin.ami": {
     "allowed_tags": [
@@ -19,7 +21,25 @@
     ]
   },
   "plugin.secgroups": {
-    "allowed_ports": [22]
+    "allowed_ports": [
+      22
+    ],
+    "allowed_protocols": [
+      "icmp"
+    ],
+    "whitelisted_ips": [
+      "127.0.0.1"
+    ],
+    "whitelisted_entries": {
+      "sg-1234567 (foobar)": {
+        "22": [
+          "0.0.0.0/0"
+        ],
+        "8000-9000": [
+          "1.2.3.4/32"
+        ]
+      }
+    }
   },
   "plugin.sso_unprotected": {
     "godauth_url": "",
@@ -88,6 +108,8 @@
     "chef_server_url": "https://api.opscode.com/organizations/xxx",
     "client_key_file": "/etc/chef/client.pem",
     "client_name": "foo",
-    "excluded_instances": ["jenkins"]
+    "excluded_instances": [
+      "jenkins"
+    ]
   }
 }

@@ -10,6 +10,7 @@ class SecurityGroupPlugin:
         self.allowed_protocols = ["icmp"]
         self.allowed_ports = []
         self.whitelisted_ips = []
+        self.whitelisted_entries = {}
 
     def init(self, edda_client, config, status):
         self.edda_client = edda_client
@@ -18,6 +19,8 @@ class SecurityGroupPlugin:
             self.allowed_protocols = config["allowed_protocols"]
         if "allowed_ports" in config:
             self.allowed_ports = config["allowed_ports"]
+        if "whitelisted_entries" in config:
+            self.whitelisted_entries = config["whitelisted_entries"]
         if "whitelisted_ips" in config:
             self.whitelisted_ips = config["whitelisted_ips"]
             for i, ip in enumerate(self.whitelisted_ips):
@@ -30,20 +33,13 @@ class SecurityGroupPlugin:
     def do_run(self):
         groups = self.edda_client.updateonly().query("/api/v2/aws/securityGroups;_expand")
         machines = self.edda_client.query("/api/v2/view/instances;_expand")
-        for group in groups:
-            perms = list(self.suspicious_perms(group["ipPermissions"])) if "ipPermissions" in group else []
+        for security_group in groups:
+            perms = list(self.suspicious_perms(security_group))
             if perms:
-                affected_machines = self.machines_with_group(machines, group["groupId"])
-
-                aws_availability_zone = '' if not affected_machines else affected_machines[0]['placement']['availabilityZone']
-                aws_region = aws_availability_zone.rstrip(string.ascii_lowercase)
-                aws_account = group['ownerId']
                 yield {
                     "plugin_name": self.plugin_name,
-                    "id": '%s (%s)' % (group["groupId"], group["groupName"]),
-                    "details": list(self.create_details(perms, affected_machines,
-                                                        aws_region=aws_region,
-                                                        aws_account=aws_account))
+                    "id": '%s (%s)' % (security_group["groupId"], security_group["groupName"]),
+                    "details": list(self.create_details(perms, machines, security_group))
                 }
 
     def machines_with_group(self, machines, groupId):
@@ -52,16 +48,25 @@ class SecurityGroupPlugin:
     def machine_in_group(self, machine, groupId):
         return "securityGroups" in machine and any([sg["groupId"] == groupId for sg in machine["securityGroups"]])
 
-    def suspicious_perms(self, perms):
+    def is_whitelisted_perm(self, security_group, perm):
+        port = str(perm["fromPort"]) if perm["fromPort"] == perm["toPort"] else '{fromPort}-{toPort}'.format(
+            fromPort=perm["fromPort"], toPort=perm["toPort"])
+        entry_name = '{sg_id} ({sg_name})'.format(sg_id=security_group["groupId"], sg_name=security_group["groupName"])
+        whitelisted_ip_ranges = self.whitelisted_entries.get(entry_name, {}).get(port, [])
+        return bool(whitelisted_ip_ranges and all(
+            [actual_ip_range in whitelisted_ip_ranges for actual_ip_range in perm.get("ipRanges", [])]))
+
+    def suspicious_perms(self, security_group):
+        perms = security_group.get("ipPermissions", [])
         for perm in perms:
-            if self.is_suspicious(perm):
+            if not self.is_whitelisted_perm(security_group, perm) and self.is_suspicious_permission(perm):
                 yield perm
 
     def is_suspicious_ip_range(self, ip_range):
         # TODO: handle subsets of IP ranges as well
         return ip_range not in self.whitelisted_ips
 
-    def is_suspicious(self, perm):
+    def is_suspicious_permission(self, perm):
         # fromPort and toPort defines a range for incoming connections
         # note: fromPort is not the peer's src port
         proto_ok = "ipProtocol" in perm and perm["ipProtocol"] in self.allowed_protocols
@@ -74,10 +79,15 @@ class SecurityGroupPlugin:
             return f != t or f not in self.allowed_ports
         return False
 
-    def create_details(self, perms, machines, aws_region='', aws_account=''):
+    def create_details(self, perms, machines, group):
+        affected_machines = self.machines_with_group(machines, group["groupId"])
+        aws_availability_zone = '' if not affected_machines else affected_machines[0]['placement']['availabilityZone']
+        aws_region = aws_availability_zone.rstrip(string.ascii_lowercase)
+        aws_account = group['ownerId']
         for perm in perms:
-            mproc = [(m["instanceId"], m["publicIpAddress"] or m["privateIpAddress"], ",".join([t["value"] for t in m["tags"]]))
-                     for m in machines]
+            mproc = [(m["instanceId"], m["publicIpAddress"] or m["privateIpAddress"],
+                      ",".join([t["value"] for t in m["tags"]]))
+                     for m in affected_machines]
             yield {
                 'port_open': len(mproc) > 0 and self.is_port_open(mproc[0][1], perm['fromPort'], perm['toPort']),
                 'ipAddresses': [m[1] for m in mproc if m[1]],
@@ -91,7 +101,7 @@ class SecurityGroupPlugin:
             }
 
     def is_port_open(self, host, port_from, port_to):
-        if host and port_to and port_from and port_to >= 0 and port_to <= 65535 and port_from >= 0 and port_from <= 65535:
+        if host and port_to and port_from and 0 <= port_to <= 65535 and 0 <= port_from <= 65535:
             if abs(port_to - port_from) > 20:
                 return None
             for port_to_check in range(int(port_from), int(port_to) + 1):
